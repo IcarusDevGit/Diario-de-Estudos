@@ -1,0 +1,18 @@
+{
+  "versao": 1,
+  "classe": "Pausa",
+  "campos": {
+    "inicio": {
+      "tipo": "datetime"
+    },
+    "fim": {
+      "tipo": "datetime",
+      "opcional": true
+    },
+    "duracao": {
+      "tipo": "float",
+      "calculado": true,
+      "unidade": "horas"
+    }
+  }
+}

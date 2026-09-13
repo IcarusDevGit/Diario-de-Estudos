@@ -1,0 +1,68 @@
+## Purpose
+
+Definir esquemas JSON estruturados e validáveis que descrevam os modelos do diário e possam servir como entrada inequívoca para consumidores como geradores de classes Python.
+
+## ADDED Requirements
+
+### Requirement: Metadados estruturais do esquema
+Cada arquivo de esquema SHALL conter `versao`, `classe` e `campos`; um esquema que represente uma especialização SHALL também declarar `herda_de`. Os nomes de classe SHALL ser identificadores Python sem acentos, incluindo exatamente `Pausa`, `Tarefa`, `SessaoEstudo`, `SessaoExercicio` e `RegistroDiario` para os cinco esquemas existentes.
+
+#### Scenario: Identificação de uma classe base
+- **WHEN** um consumidor lê `tarefa.json`
+- **THEN** encontra a versão do formato, a classe `Tarefa` e suas definições em `campos`
+
+#### Scenario: Identificação de uma especialização
+- **WHEN** um consumidor lê `sessão-exercicio.json`
+- **THEN** encontra a classe `SessaoExercicio` e a referência de herança para `Tarefa`
+
+### Requirement: Definições estruturadas de campos
+Cada entrada de `campos` SHALL ser um objeto com um `tipo` explícito. Atributos aplicáveis SHALL expressar opcionalidade, valor padrão, valor mínimo, valor máximo, cálculo derivado e tipo dos itens de uma lista sem usar uma expressão textual livre.
+
+#### Scenario: Lista tipada de pausas
+- **WHEN** um consumidor lê o campo `pausas` de `Tarefa`
+- **THEN** identifica separadamente o tipo `list`, o tipo de item `Pausa` e o valor padrão de lista vazia
+
+#### Scenario: Campo calculado
+- **WHEN** um consumidor lê `duracao` em `Tarefa` ou `Pausa`
+- **THEN** identifica o campo como `float` calculado, e não como um valor livre obrigatório
+
+### Requirement: Tipos temporais coerentes
+Os instantes de início e fim de tarefas e pausas SHALL usar `datetime`. A data civil do registro diário SHALL usar `date`, e os horários associados àquele dia SHALL usar `time`.
+
+#### Scenario: Intervalo que atravessa a meia-noite
+- **WHEN** uma tarefa ou pausa começa em um dia e termina no dia seguinte
+- **THEN** seus campos `inicio` e `fim` preservam data e hora suficientes para calcular a duração corretamente
+
+#### Scenario: Horário do registro diário
+- **WHEN** um consumidor lê um horário como `acordei` no registro diário
+- **THEN** encontra o tipo `time`, enquanto o campo `data` possui o tipo `date`
+
+### Requirement: Estado incompleto representável
+Campos que somente são conhecidos após preenchimento ou finalização SHALL ser opcionais. Coleções e valores com um padrão natural SHALL declarar esse padrão no esquema.
+
+#### Scenario: Tarefa em andamento
+- **WHEN** uma tarefa é criada antes de ser finalizada
+- **THEN** o esquema permite que `fim` esteja ausente e define `pausas` como uma lista inicialmente vazia
+
+#### Scenario: Registro diário parcialmente preenchido
+- **WHEN** o relatório do dia ainda não foi concluído
+- **THEN** horários e avaliações ainda desconhecidos podem permanecer ausentes
+
+### Requirement: Limites das avaliações
+Todos os campos de avaliação subjetiva de `RegistroDiario`, `SessaoEstudo` e `SessaoExercicio` SHALL ser inteiros opcionais com mínimo 1 e máximo 5.
+
+#### Scenario: Avaliação dentro do intervalo
+- **WHEN** um consumidor valida uma avaliação igual a 1 ou 5
+- **THEN** o valor satisfaz os limites declarados pelo esquema
+
+#### Scenario: Avaliação fora do intervalo
+- **WHEN** um consumidor valida uma avaliação menor que 1 ou maior que 5
+- **THEN** o valor não satisfaz os limites declarados pelo esquema
+
+### Requirement: Documentos JSON válidos
+Os cinco arquivos em `Esquemas/` SHALL conter documentos JSON válidos, codificados em UTF-8, e não SHALL permanecer vazios.
+
+#### Scenario: Validação sintática dos esquemas
+- **WHEN** cada arquivo com extensão `.json` em `Esquemas/` é analisado por um parser JSON
+- **THEN** todos são aceitos sem erro sintático
+

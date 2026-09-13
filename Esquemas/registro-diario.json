@@ -1,0 +1,101 @@
+{
+  "versao": 1,
+  "classe": "RegistroDiario",
+  "campos": {
+    "data": {
+      "tipo": "date"
+    },
+    "dormi_dia_anterior": {
+      "tipo": "time",
+      "opcional": true
+    },
+    "acordei": {
+      "tipo": "time",
+      "opcional": false
+    },
+    "levantei_da_cama": {
+      "tipo": "time",
+      "opcional": false
+    },
+    "cafe_da_manha": {
+      "tipo": "time",
+      "opcional": true
+    },
+    "remedio": {
+      "tipo": "time",
+      "opcional": true
+    },
+    "almoco": {
+      "tipo": "time",
+      "opcional": true
+    },
+    "folga": {
+      "tipo": "bool",
+      "opcional": false
+    },
+    "concentracao": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "exercicio_fisico": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "ativacao_mental": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "procrastinacao": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "compulsao_alimentar": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "estresse": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "qualidade_do_sono": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "alcool": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "sexo_e_masturbacao": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "motivacao": {
+      "tipo": "int",
+      "opcional": true,
+      "minimo": 1,
+      "maximo": 5
+    },
+    "fui_dormir": {
+      "tipo": "time",
+      "opcional": true
+    }
+  }
+}

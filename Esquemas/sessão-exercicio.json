@@ -1,0 +1,25 @@
+{
+    "versao": 1,
+    "classe": "SessaoExercicio",
+    "classe_mae": "Tarefa",
+    "campos": {
+        "performance": {
+            "tipo": "int",
+            "opcional": true,
+            "minimo": 1,
+            "maximo": 5
+        },
+        "motivacao": {
+            "tipo": "int",
+            "opcional": true,
+            "minimo": 1,
+            "maximo": 5
+        },
+        "procrastinacao": {
+            "tipo": "int",
+            "opcional": true,
+            "minimo": 1,
+            "maximo": 5
+        }
+    }
+}

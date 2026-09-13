@@ -1,0 +1,30 @@
+{
+  "versao": 1,
+  "classe": "Tarefa",
+  "campos": {
+    "inicio": {
+      "tipo": "datetime"
+    },
+    "fim": {
+      "tipo": "datetime",
+      "opcional": true
+    },
+    "pausas": {
+      "tipo": "list",
+      "itens": "Pausa",
+      "padrao": []
+    },
+    "duracao": {
+      "tipo": "float",
+      "calculado": true,
+      "unidade": "horas"
+    },
+    "nome": {
+      "tipo": "str"
+    },
+    "notas": {
+      "tipo": "str",
+      "padrao": ""
+    }
+  }
+}
