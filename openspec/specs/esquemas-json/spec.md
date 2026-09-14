@@ -18,7 +18,7 @@ Cada arquivo de esquema SHALL conter `versao`, `classe` e `campos`; um esquema q
 - **THEN** encontra a classe `SessaoExercicio` e a referência `classe_mae` para `Tarefa`
 
 ### Requirement: Definições estruturadas de campos
-Cada entrada de `campos` SHALL ser um objeto com um `tipo` explícito. Atributos aplicáveis SHALL expressar opcionalidade, valor padrão, valor mínimo, valor máximo, cálculo derivado e tipo dos itens de uma lista sem usar uma expressão textual livre.
+Cada entrada de `campos` SHALL ser um objeto com um `tipo` explícito. Atributos aplicáveis SHALL expressar opcionalidade, valor padrão, valor mínimo, valor máximo, cálculo derivado, unidade/formato e tipo dos itens de uma lista sem usar uma expressão textual livre. Os campos `duracao` de `Tarefa` e `Pausa` SHALL ser textos calculados com unidade/formato `HH:MM:SS`.
 
 #### Scenario: Lista tipada de pausas
 - **WHEN** um consumidor lê o campo `pausas` de `Tarefa`
@@ -26,7 +26,7 @@ Cada entrada de `campos` SHALL ser um objeto com um `tipo` explícito. Atributos
 
 #### Scenario: Campo calculado
 - **WHEN** um consumidor lê `duracao` em `Tarefa` ou `Pausa`
-- **THEN** identifica o campo como `float` calculado, e não como um valor livre obrigatório
+- **THEN** identifica o campo como `str` calculado com unidade/formato `HH:MM:SS`, e não como um valor livre obrigatório
 
 ### Requirement: Tipos temporais coerentes
 Os instantes de início e fim de tarefas e pausas SHALL usar `datetime`. A data civil do registro diário SHALL usar `date`, e os horários associados àquele dia SHALL usar `time`.

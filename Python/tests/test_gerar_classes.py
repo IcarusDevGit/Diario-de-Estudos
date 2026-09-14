@@ -135,9 +135,14 @@ class GeradorTestCase(unittest.TestCase):
         self.assertIsNone(primeira.inicio)
         mapa = {campo.name: campo for campo in fields(modulo.Tarefa)}
         self.assertFalse(mapa["duracao"].init)
+        self.assertEqual(mapa["duracao"].type, "str | None")
+        self.assertEqual(mapa["duracao"].metadata["unidade"], "HH:MM:SS")
+        mapa_pausa = {campo.name: campo for campo in fields(modulo.Pausa)}
+        self.assertEqual(mapa_pausa["duracao"].type, "str | None")
+        self.assertEqual(mapa_pausa["duracao"].metadata["unidade"], "HH:MM:SS")
         self.assertIn("opcional", mapa["inicio"].metadata)
         with self.assertRaises(TypeError):
-            modulo.Tarefa(duracao=1.0)
+            modulo.Tarefa(duracao="00:00:01")
 
     def test_valida_limites_e_aceita_none(self) -> None:
         gerar_classes.executar(gerar_classes.DIRETORIO_ESQUEMAS, self.destino)

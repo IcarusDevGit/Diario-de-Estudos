@@ -15,9 +15,9 @@
       "padrao": []
     },
     "duracao": {
-      "tipo": "float",
+      "tipo": "str",
       "calculado": true,
-      "unidade": "horas"
+      "unidade": "HH:MM:SS"
     },
     "nome": {
       "tipo": "str"

@@ -15,6 +15,7 @@ from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
 import Python.Classes as modelos
+from Python.duracao import ErroDuracao, duracao_para_segundos
 
 
 __all__ = [
@@ -157,6 +158,9 @@ def modelo_para_dados(modelo: object, *, _caminho: str = "$") -> dict[str, Any]:
     dicas = get_type_hints(classe)
     resultado: dict[str, Any] = {"classe": classe.__name__}
     for campo in fields(modelo):
+        _validar_metadados(
+            getattr(modelo, campo.name), campo.metadata, f"{_caminho}.{campo.name}"
+        )
         resultado[campo.name] = _converter_para_dados(
             getattr(modelo, campo.name), dicas[campo.name], f"{_caminho}.{campo.name}"
         )
@@ -257,8 +261,11 @@ def _converter_para_modelo(
     return valor
 
 
-def _validar_limites(
-    valor: Any, metadados: Any, caminho: str, origem: str | Path | None
+def _validar_metadados(
+    valor: Any,
+    metadados: Any,
+    caminho: str,
+    origem: str | Path | None = None,
 ) -> None:
     if valor is None:
         return
@@ -266,6 +273,11 @@ def _validar_limites(
         _falhar(caminho, f"valor abaixo de minimo={metadados['minimo']}", origem)
     if "maximo" in metadados and valor > metadados["maximo"]:
         _falhar(caminho, f"valor acima de maximo={metadados['maximo']}", origem)
+    if metadados.get("unidade") == "HH:MM:SS":
+        try:
+            duracao_para_segundos(valor, caminho=caminho)
+        except ErroDuracao as erro:
+            _falhar(caminho, str(erro), origem)
 
 
 def _construir_modelo(
@@ -303,7 +315,7 @@ def _construir_modelo(
         convertido = _converter_para_modelo(
             dados[nome], dicas[nome], f"{caminho}.{nome}", origem
         )
-        _validar_limites(convertido, campo.metadata, f"{caminho}.{nome}", origem)
+        _validar_metadados(convertido, campo.metadata, f"{caminho}.{nome}", origem)
         (argumentos if campo.init else posteriores)[nome] = convertido
     try:
         modelo = classe(**argumentos)

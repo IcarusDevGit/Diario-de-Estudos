@@ -11,7 +11,7 @@ __all__ = ('Pausa', 'RegistroDiario', 'Tarefa', 'SessaoEstudo', 'SessaoExercicio
 class Pausa:
     inicio: datetime | None = field(default=None, metadata={'opcional': False})
     fim: datetime | None = field(default=None, metadata={'opcional': True})
-    duracao: float | None = field(default=None, init=False, metadata={'opcional': False, 'calculado': True, 'unidade': 'horas'})
+    duracao: str | None = field(default=None, init=False, metadata={'opcional': False, 'calculado': True, 'unidade': 'HH:MM:SS'})
 
     def __post_init__(self) -> None:
         pass
@@ -85,7 +85,7 @@ class Tarefa:
     inicio: datetime | None = field(default=None, metadata={'opcional': False})
     fim: datetime | None = field(default=None, metadata={'opcional': True})
     pausas: list[Pausa] | None = field(default_factory=list, metadata={'opcional': False})
-    duracao: float | None = field(default=None, init=False, metadata={'opcional': False, 'calculado': True, 'unidade': 'horas'})
+    duracao: str | None = field(default=None, init=False, metadata={'opcional': False, 'calculado': True, 'unidade': 'HH:MM:SS'})
     nome: str | None = field(default=None, metadata={'opcional': False})
     notas: str | None = field(default='', metadata={'opcional': False})
 

@@ -32,7 +32,7 @@ class SerializacaoYAMLTestCase(unittest.TestCase):
             inicio=datetime(2026, 9, 13, 10, 0, tzinfo=fuso),
             fim=datetime(2026, 9, 13, 10, 15, tzinfo=fuso),
         )
-        pausa.duracao = 0.25
+        pausa.duracao = "00:15:00"
         objetos = [
             pausa,
             Tarefa(nome="Tarefa", pausas=[pausa]),
@@ -69,8 +69,12 @@ class SerializacaoYAMLTestCase(unittest.TestCase):
         tarefa = yaml_para_modelo("classe: Tarefa\nnome: teste\n")
         self.assertEqual(tarefa.pausas, [])
         self.assertIsNone(tarefa.inicio)
-        tarefa = yaml_para_modelo("classe: Tarefa\nduracao: 1.5\n")
-        self.assertEqual(tarefa.duracao, 1.5)
+        tarefa = yaml_para_modelo("classe: Tarefa\nduracao: '27:02:03'\n")
+        self.assertEqual(tarefa.duracao, "27:02:03")
+        with self.assertRaisesRegex(ErroSerializacaoYAML, r"\$\.duracao"):
+            yaml_para_modelo("classe: Tarefa\nduracao: 1.5\n")
+        with self.assertRaisesRegex(ErroSerializacaoYAML, r"\$\.duracao"):
+            yaml_para_modelo("classe: Tarefa\nduracao: '1:2:3'\n")
 
     def test_segunda_serializacao_e_deterministica(self) -> None:
         original = modelo_para_yaml(SessaoEstudo(nome="Python", concentracao=3))

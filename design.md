@@ -41,4 +41,6 @@ Comandos:
     fim é preenchido com a hora atual
     o campo 'duracao' é preenchido automaticamente com o valor do campo 'fim' - 'inicio' 
 
+persistir-dia-no-mongodb
+consolidar-cli
     
