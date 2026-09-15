@@ -55,10 +55,18 @@ class GeradorTestCase(unittest.TestCase):
 
     def test_carrega_os_cinco_esquemas_reais(self) -> None:
         modelos = gerar_classes.carregar_esquemas(gerar_classes.DIRETORIO_ESQUEMAS)
-        self.assertEqual(
-            {modelo.classe for modelo in modelos},
-            {"Pausa", "Tarefa", "SessaoEstudo", "SessaoExercicio", "RegistroDiario"},
+        classes = {modelo.classe for modelo in modelos}
+        self.assertTrue(
+            {"Pausa", "Tarefa", "SessaoEstudo", "SessaoExercicio", "Relatorio", "RegistroDiario"}.issubset(classes)
         )
+        mapa = {modelo.classe: modelo for modelo in modelos}
+        self.assertEqual(mapa["RegistroDiario"].classe_mae, "Relatorio")
+        self.assertNotIn("data", mapa["RegistroDiario"].campos)
+        self.assertIsNone(mapa["Relatorio"].classe_mae)
+        self.assertEqual(set(mapa["Relatorio"].campos), {"data", "nome", "notas"})
+        self.assertEqual(mapa["Relatorio"].campos["data"]["tipo"], "date")
+        self.assertTrue(mapa["Relatorio"].campos["nome"].get("opcional"))
+        self.assertTrue(mapa["Relatorio"].campos["notas"].get("opcional"))
 
     def test_json_invalido_identifica_arquivo(self) -> None:
         (self.esquemas / "quebrado.json").write_text("{", encoding="utf-8")
@@ -118,12 +126,45 @@ class GeradorTestCase(unittest.TestCase):
             gerar_classes.executar(gerar_classes.DIRETORIO_ESQUEMAS, self.destino), 0
         )
         modulo = self.carregar_modulo()
-        self.assertEqual(
-            set(modulo.__all__),
-            {"Pausa", "Tarefa", "SessaoEstudo", "SessaoExercicio", "RegistroDiario"},
+        modelos = gerar_classes.carregar_esquemas(gerar_classes.DIRETORIO_ESQUEMAS)
+        self.assertEqual(set(modulo.__all__), {modelo.classe for modelo in modelos})
+        self.assertTrue(
+            {"Pausa", "Tarefa", "SessaoEstudo", "SessaoExercicio", "Relatorio", "RegistroDiario"}.issubset(
+                set(modulo.__all__)
+            )
         )
+        self.assertTrue(issubclass(modulo.RegistroDiario, modulo.Relatorio))
         self.assertTrue(issubclass(modulo.SessaoEstudo, modulo.Tarefa))
         self.assertTrue(issubclass(modulo.SessaoExercicio, modulo.Tarefa))
+
+    def test_compatibilidade_dataclass_herdada(self) -> None:
+        gerar_classes.executar(gerar_classes.DIRETORIO_ESQUEMAS, self.destino)
+        modulo = self.carregar_modulo()
+        from datetime import date
+
+        relatorio = modulo.Relatorio(data=date(2026, 9, 15), nome="Geral", notas="Observações")
+        self.assertEqual(relatorio.data, date(2026, 9, 15))
+        self.assertEqual(relatorio.nome, "Geral")
+        self.assertEqual(relatorio.notas, "Observações")
+
+        relatorio_padrao = modulo.Relatorio(data=date(2026, 9, 15))
+        self.assertIsNone(relatorio_padrao.nome)
+        self.assertIsNone(relatorio_padrao.notas)
+
+        diario = modulo.RegistroDiario(data=date(2026, 9, 15))
+        self.assertIsNone(diario.nome)
+        self.assertIsNone(diario.notas)
+        self.assertEqual(diario.data, date(2026, 9, 15))
+
+        mapa_relatorio = {campo.name: campo for campo in fields(modulo.Relatorio)}
+        self.assertFalse(mapa_relatorio["data"].metadata["opcional"])
+        self.assertTrue(mapa_relatorio["nome"].metadata["opcional"])
+        self.assertTrue(mapa_relatorio["notas"].metadata["opcional"])
+
+        mapa_diario = {campo.name: campo for campo in fields(modulo.RegistroDiario)}
+        self.assertIn("data", mapa_diario)
+        self.assertIn("nome", mapa_diario)
+        self.assertIn("notas", mapa_diario)
 
     def test_padrao_mutavel_calculado_metadados_e_none(self) -> None:
         gerar_classes.executar(gerar_classes.DIRETORIO_ESQUEMAS, self.destino)

@@ -7,7 +7,7 @@ Definir esquemas JSON estruturados e validáveis que descrevam os modelos do di�
 ## Requirements
 
 ### Requirement: Metadados estruturais do esquema
-Cada arquivo de esquema SHALL conter `versao`, `classe` e `campos`; um esquema que represente uma especialização SHALL também declarar `classe_mae`. Os nomes de classe SHALL ser identificadores Python sem acentos, incluindo exatamente `Pausa`, `Tarefa`, `SessaoEstudo`, `SessaoExercicio` e `RegistroDiario` para os cinco esquemas existentes.
+Cada arquivo de esquema SHALL conter `versao`, `classe` e `campos`; um esquema que represente uma especialização SHALL também declarar `classe_mae`. Os nomes de classe SHALL ser identificadores Python sem acentos. O catálogo SHALL incluir as classes fundamentais `Relatorio`, `RegistroDiario`, `Pausa`, `Tarefa`, `SessaoEstudo` e `SessaoExercicio`, sem limitar a inclusão futura de novos modelos.
 
 #### Scenario: Identificação de uma classe base
 - **WHEN** um consumidor lê `tarefa.json`
@@ -16,6 +16,10 @@ Cada arquivo de esquema SHALL conter `versao`, `classe` e `campos`; um esquema q
 #### Scenario: Identificação de uma especialização
 - **WHEN** um consumidor lê `sessão-exercicio.json`
 - **THEN** encontra a classe `SessaoExercicio` e a referência `classe_mae` para `Tarefa`
+
+#### Scenario: Catálogo ampliado
+- **WHEN** um novo esquema válido é adicionado a `Esquemas`
+- **THEN** o contrato não exige atualizar uma quantidade fixa de classes
 
 ### Requirement: Definições estruturadas de campos
 Cada entrada de `campos` SHALL ser um objeto com um `tipo` explícito. Atributos aplicáveis SHALL expressar opcionalidade, valor padrão, valor mínimo, valor máximo, cálculo derivado, unidade/formato e tipo dos itens de uma lista sem usar uma expressão textual livre. Os campos `duracao` de `Tarefa` e `Pausa` SHALL ser textos calculados com unidade/formato `HH:MM:SS`.
@@ -62,7 +66,7 @@ Todos os campos de avaliação subjetiva de `RegistroDiario`, `SessaoEstudo` e `
 - **THEN** o valor não satisfaz os limites declarados pelo esquema
 
 ### Requirement: Documentos JSON válidos
-Os cinco arquivos em `Esquemas/` SHALL conter documentos JSON válidos, codificados em UTF-8, e não SHALL permanecer vazios.
+Todos os arquivos com extensão `.json` em `Esquemas/` SHALL conter documentos JSON válidos, codificados em UTF-8, e não SHALL permanecer vazios.
 
 #### Scenario: Validação sintática dos esquemas
 - **WHEN** cada arquivo com extensão `.json` em `Esquemas/` é analisado por um parser JSON
@@ -89,3 +93,18 @@ A classe base `Tarefa` SHALL declarar o campo `dia` com tipo `date`, permitindo 
 #### Scenario: Atividade legada
 - **WHEN** um YAML anterior não possui `dia`
 - **THEN** o modelo ainda pode ser carregado com `dia: null` para migração explícita
+
+### Requirement: Hierarquia de relatórios
+O esquema `Relatorio` SHALL declarar `data` como `date`, `nome` como `str` anulável e `notas` como `str` anulável. `RegistroDiario` SHALL declarar `Relatorio` como `classe_mae`, herdar esses campos e manter seus campos específicos. A nulabilidade herdada de `nome` SHALL preservar a leitura de registros diários anteriores, enquanto a criação de um relatório genérico SHALL exigir nome no respectivo comando.
+
+#### Scenario: Relatório genérico
+- **WHEN** um consumidor lê o esquema de `Relatorio`
+- **THEN** encontra os campos `data`, `nome` e `notas`
+
+#### Scenario: Relatório diário especializado
+- **WHEN** um consumidor lê o esquema de `RegistroDiario`
+- **THEN** encontra `classe_mae: Relatorio` e obtém `data`, `nome` e `notas` por herança
+
+#### Scenario: Registro diário legado
+- **WHEN** um YAML de `RegistroDiario` anterior não contém `nome` nem `notas`
+- **THEN** o modelo pode ser carregado com esses campos como `null`

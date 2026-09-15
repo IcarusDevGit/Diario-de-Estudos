@@ -11,6 +11,10 @@ from typing import Sequence
 from Python.Classes import SessaoEstudo, SessaoExercicio, Tarefa
 from Python.configuracao_mongodb import ErroConfiguracaoMongoDB, diagnosticar_mongodb
 from Python.gerenciamento_dia import ErroGerenciamentoDia, GerenciadorDia
+from Python.gerenciamento_relatorios import (
+    ErroGerenciamentoRelatorio,
+    GerenciadorRelatorios,
+)
 from Python.gerenciamento_tarefas import ErroGerenciamento, GerenciadorTarefas
 from Python.persistencia_dia import ErroPersistenciaDia, persistir_dia
 
@@ -46,10 +50,20 @@ def criar_parser() -> argparse.ArgumentParser:
         dest="tipo_diagnostico", required=True
     )
     tipos_diagnostico.add_parser("mongodb")
+
+    criar = acoes.add_parser("criar")
+    tipos_criar = criar.add_subparsers(dest="tipo", required=True)
+    relatorio_parser = tipos_criar.add_parser("relatorio")
+    relatorio_parser.add_argument("nome")
+    relatorio_parser.add_argument("--data")
     return parser
 
 
 def executar(argumentos: argparse.Namespace) -> Path | str:
+    if argumentos.acao == "criar" and argumentos.tipo == "relatorio":
+        return GerenciadorRelatorios(argumentos.raiz).criar_relatorio(
+            nome=argumentos.nome, data=argumentos.data
+        )
     if argumentos.acao == "diagnosticar" and argumentos.tipo_diagnostico == "mongodb":
         diagnosticar_mongodb(argumentos.raiz)
         return "Conexão com MongoDB estabelecida."
@@ -79,7 +93,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         argumentos = parser.parse_args(argv)
         caminho = executar(argumentos)
-    except (ErroGerenciamento, ErroGerenciamentoDia, ErroConfiguracaoMongoDB, ErroPersistenciaDia) as erro:
+    except (
+        ErroGerenciamento,
+        ErroGerenciamentoDia,
+        ErroConfiguracaoMongoDB,
+        ErroPersistenciaDia,
+        ErroGerenciamentoRelatorio,
+    ) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 1
     print(caminho)

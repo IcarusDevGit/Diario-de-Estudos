@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Callable
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
-from Python.Classes import RegistroDiario, Tarefa
+from Python.Classes import RegistroDiario, Relatorio, Tarefa
 from Python.ciclo_dia import listar_registros, ErroCicloDia
 from Python.configuracao_mongodb import carregar_mongodb_database, criar_cliente_mongodb
 from Python.serializacao_yaml import ler_yaml, modelo_para_dados, ErroSerializacaoYAML
@@ -18,7 +18,8 @@ def montar_retrato(raiz: str|Path, data_ciclo: date)->dict[str,Any]:
     try:
         for caminho in sorted((raiz/"Relatórios").glob("*.yaml")):
             modelo=ler_yaml(caminho)
-            if not hasattr(modelo,"data"): raise ErroPersistenciaDia(f"relatório sem data: {caminho}")
+            if not isinstance(modelo, Relatorio):
+                continue
             if modelo.data==data_ciclo:
                 relatorios.append(modelo_para_dados(modelo))
                 if type(modelo) is RegistroDiario: diarios.append(modelo)

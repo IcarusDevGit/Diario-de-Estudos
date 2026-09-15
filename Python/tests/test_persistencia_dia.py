@@ -4,7 +4,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 from pymongo.errors import OperationFailure
-from Python.Classes import RegistroDiario, SessaoEstudo, Tarefa
+from Python.Classes import RegistroDiario, Relatorio, SessaoEstudo, Tarefa
 from Python.ciclo_dia import ErroCicloDia, ciclo_aberto, listar_registros
 from Python.migrar_vinculos_dia import ErroMigracaoVinculo, migrar
 from Python.persistencia_dia import ErroPersistenciaDia, montar_retrato, persistir_dia
@@ -82,5 +82,63 @@ class PersistenciaDiaTestCase(unittest.TestCase):
         cliente=MagicMock()
         self.assertEqual(persistir_dia(self.raiz,fabrica=MagicMock(return_value=cliente)),self.data)
         cliente.__getitem__.return_value.__getitem__.return_value.replace_one.assert_called_once()
+
+    def test_selecao_relatorios_aceita_somente_relatorio_e_subclasses(self):
+        self.salvar_relatorio()
+        rel_generico = Relatorio(data=self.data, nome="Revisão geral", notas="Alguma nota")
+        salvar_yaml(rel_generico, self.raiz / "Relatórios" / "RG-2026-09-15-revisao.yaml")
+        # Modelo datado que não deriva de Relatorio não deve entrar
+        modelo_datado = Tarefa(dia=self.data, nome="Não é relatório")
+        salvar_yaml(modelo_datado, self.raiz / "Relatórios" / "OUTRO.yaml")
+
+        doc = montar_retrato(self.raiz, self.data)
+        classes_relatorios = [r["classe"] for r in doc["relatorios"]]
+        self.assertIn("RegistroDiario", classes_relatorios)
+        self.assertIn("Relatorio", classes_relatorios)
+        self.assertNotIn("Tarefa", classes_relatorios)
+        self.assertEqual(len(doc["relatorios"]), 2)
+
+    def test_exige_registro_diario_finalizado_e_ignora_generico_para_ciclo(self):
+        # Apenas relatório genérico sem RegistroDiario
+        rel_generico = Relatorio(data=self.data, nome="Revisão", notas=None)
+        salvar_yaml(rel_generico, self.raiz / "Relatórios" / "RG-2026-09-15-revisao.yaml")
+        with self.assertRaisesRegex(ErroPersistenciaDia, "ciclo exige exatamente um RegistroDiario"):
+            montar_retrato(self.raiz, self.data)
+
+        # RegistroDiario não finalizado mesmo com relatório genérico
+        self.salvar_relatorio(final=False)
+        with self.assertRaisesRegex(ErroPersistenciaDia, "ciclo exige exatamente um RegistroDiario"):
+            montar_retrato(self.raiz, self.data)
+
+        # Relatórios genéricos não alteram identificação do ciclo
+        registros = listar_registros(self.raiz)
+        self.assertEqual(len(registros), 1)
+        self.assertIsInstance(registros[0][1], RegistroDiario)
+
+    def test_persistir_dia_com_relatorio_generico_mantem_arquivos_locais(self):
+        self.salvar_relatorio()
+        caminho_generico = self.raiz / "Relatórios" / "RG-2026-09-15-planejamento.yaml"
+        salvar_yaml(Relatorio(data=self.data, nome="Planejamento", notas="Notas do planejamento"), caminho_generico)
+
+        conteudo_diario = self.rel.read_bytes()
+        conteudo_generico = caminho_generico.read_bytes()
+
+        cliente = MagicMock()
+        colecao = cliente.__getitem__.return_value.__getitem__.return_value
+        data_persistida = persistir_dia(self.raiz, self.data, fabrica=MagicMock(return_value=cliente))
+
+        self.assertEqual(data_persistida, self.data)
+        args, kwargs = colecao.replace_one.call_args
+        documento = args[1]
+        self.assertEqual(documento["data"], "2026-09-15")
+
+        rel_doc = next(r for r in documento["relatorios"] if r["classe"] == "Relatorio")
+        self.assertEqual(rel_doc["nome"], "Planejamento")
+        self.assertEqual(rel_doc["notas"], "Notas do planejamento")
+        self.assertEqual(rel_doc["data"], "2026-09-15")
+
+        # Arquivos locais inalterados
+        self.assertEqual(self.rel.read_bytes(), conteudo_diario)
+        self.assertEqual(caminho_generico.read_bytes(), conteudo_generico)
 
 if __name__=="__main__": unittest.main()

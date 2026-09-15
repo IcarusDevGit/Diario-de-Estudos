@@ -41,6 +41,6 @@ Comandos:
     fim é preenchido com a hora atual
     o campo 'duracao' é preenchido automaticamente com o valor do campo 'fim' - 'inicio' 
 
-persistir-dia-no-mongodb
 criar relatórios
+/opsx:explore permitir notas de critérios parciais (1,5; 2,5; 3,5; 4,5)
     

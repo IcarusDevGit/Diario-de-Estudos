@@ -1,10 +1,8 @@
 {
   "versao": 1,
   "classe": "RegistroDiario",
+  "classe_mae": "Relatorio",
   "campos": {
-    "data": {
-      "tipo": "date"
-    },
     "dormi_dia_anterior": {
       "tipo": "time",
       "unidade": "HH:MM",

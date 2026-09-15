@@ -1,0 +1,17 @@
+{
+  "versao": 1,
+  "classe": "Relatorio",
+  "campos": {
+    "data": {
+      "tipo": "date"
+    },
+    "nome": {
+      "tipo": "str",
+      "opcional": true
+    },
+    "notas": {
+      "tipo": "str",
+      "opcional": true
+    }
+  }
+}

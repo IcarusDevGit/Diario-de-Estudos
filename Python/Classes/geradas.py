@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
 
-__all__ = ('Pausa', 'RegistroDiario', 'Tarefa', 'SessaoEstudo', 'SessaoExercicio')
+__all__ = ('Pausa', 'Relatorio', 'RegistroDiario', 'Tarefa', 'SessaoEstudo', 'SessaoExercicio')
 
 @dataclass(kw_only=True)
 class Pausa:
@@ -17,8 +17,16 @@ class Pausa:
         pass
 
 @dataclass(kw_only=True)
-class RegistroDiario:
+class Relatorio:
     data: date | None = field(default=None, metadata={'opcional': False})
+    nome: str | None = field(default=None, metadata={'opcional': True})
+    notas: str | None = field(default=None, metadata={'opcional': True})
+
+    def __post_init__(self) -> None:
+        pass
+
+@dataclass(kw_only=True)
+class RegistroDiario(Relatorio):
     dormi_dia_anterior: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
     acordei: time | None = field(default=None, metadata={'opcional': False, 'unidade': 'HH:MM'})
     levantei_da_cama: time | None = field(default=None, metadata={'opcional': False, 'unidade': 'HH:MM'})
@@ -39,6 +47,7 @@ class RegistroDiario:
     fui_dormir: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if self.concentracao is not None and self.concentracao < 1:
             raise ValueError('RegistroDiario' + '.concentracao viola minimo=1')
         if self.concentracao is not None and self.concentracao > 5:

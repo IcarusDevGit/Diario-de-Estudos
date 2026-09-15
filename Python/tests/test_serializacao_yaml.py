@@ -6,7 +6,14 @@ import re
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
-from Python.Classes import Pausa, RegistroDiario, SessaoEstudo, SessaoExercicio, Tarefa
+from Python.Classes import (
+    Pausa,
+    RegistroDiario,
+    Relatorio,
+    SessaoEstudo,
+    SessaoExercicio,
+    Tarefa,
+)
 from Python.serializacao_yaml import (
     ErroSerializacaoYAML,
     ler_yaml,
@@ -26,29 +33,77 @@ class SerializacaoYAMLTestCase(unittest.TestCase):
         self.assertIn("Revisão", texto)
         self.assertTrue(texto.endswith("\n"))
 
-    def test_ida_e_volta_das_cinco_classes(self) -> None:
+    def test_ida_e_volta_dos_modelos_polimorficos(self) -> None:
         fuso = timezone(timedelta(hours=-3))
         pausa = Pausa(
             inicio=datetime(2026, 9, 13, 10, 0, tzinfo=fuso),
             fim=datetime(2026, 9, 13, 10, 15, tzinfo=fuso),
         )
         pausa.duracao = "00:15:00"
+        relatorio_generico = Relatorio(
+            data=date(2026, 9, 13),
+            nome="Revisão geral: Ação & Atenção",
+            notas="Observações com acentuação e cedilha: ótimo progresso!",
+        )
+        registro_diario_completo = RegistroDiario(
+            data=date(2026, 9, 13),
+            nome="Dia produtivo",
+            notas="Notas herdadas de Relatorio",
+            acordei=time(7, 30),
+            concentracao=4,
+        )
         objetos = [
             pausa,
             Tarefa(nome="Tarefa", pausas=[pausa]),
             SessaoEstudo(nome="Estudo", concentracao=5),
             SessaoExercicio(nome="Exercício", performance=4),
-            RegistroDiario(
-                data=date(2026, 9, 13),
-                acordei=time(7, 30),
-                concentracao=4,
-            ),
+            relatorio_generico,
+            registro_diario_completo,
         ]
         for objeto in objetos:
             with self.subTest(classe=type(objeto).__name__):
-                carregado = yaml_para_modelo(modelo_para_yaml(objeto))
+                texto = modelo_para_yaml(objeto)
+                self.assertNotIn(r"\u", texto)
+                carregado = yaml_para_modelo(texto)
                 self.assertIs(type(carregado), type(objeto))
                 self.assertEqual(modelo_para_dados(carregado), modelo_para_dados(objeto))
+
+        texto_generico = modelo_para_yaml(relatorio_generico)
+        self.assertTrue(texto_generico.startswith("classe: Relatorio\n"))
+        self.assertIn("data: '2026-09-13'\n", texto_generico)
+        self.assertIn("Revisão geral: Ação & Atenção", texto_generico)
+
+    def test_registro_diario_legado_sem_nome_e_notas(self) -> None:
+        yaml_legado = (
+            "classe: RegistroDiario\n"
+            "data: '2026-09-15'\n"
+            "acordei: '07:00'\n"
+            "levantei_da_cama: '07:10'\n"
+            "folga: false\n"
+        )
+        modelo = yaml_para_modelo(yaml_legado)
+        self.assertIsInstance(modelo, RegistroDiario)
+        self.assertIsNone(modelo.nome)
+        self.assertIsNone(modelo.notas)
+        self.assertEqual(modelo.data, date(2026, 9, 15))
+        self.assertEqual(modelo.acordei, time(7, 0))
+
+        # Ida e volta determinística
+        serializado1 = modelo_para_yaml(modelo)
+        reconstruido = yaml_para_modelo(serializado1)
+        serializado2 = modelo_para_yaml(reconstruido)
+        self.assertEqual(serializado1, serializado2)
+
+        # Não reescreve arquivos legados existentes durante leitura
+        with tempfile.TemporaryDirectory() as temp_dir:
+            caminho = Path(temp_dir) / "legado.yaml"
+            caminho.write_text(yaml_legado, encoding="utf-8")
+            mtime_antes = caminho.stat().st_mtime_ns
+            conteudo_antes = caminho.read_bytes()
+            carregado = ler_yaml(caminho)
+            self.assertIsInstance(carregado, RegistroDiario)
+            self.assertEqual(caminho.read_bytes(), conteudo_antes)
+            self.assertEqual(caminho.stat().st_mtime_ns, mtime_antes)
 
     def test_datetime_preserva_deslocamento(self) -> None:
         inicio = datetime(2026, 9, 13, 12, 30, tzinfo=timezone(timedelta(hours=-3)))
