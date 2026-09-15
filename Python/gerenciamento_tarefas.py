@@ -187,6 +187,10 @@ class GerenciadorTarefas:
             return None
         return caminho, self._carregar_como(caminho, Tarefa, "tarefa ou sessão")  # type: ignore[return-value]
 
+    def atividade_ativa(self) -> tuple[Path, Tarefa] | None:
+        """Retorna a atividade atual validada sem modificar seu estado."""
+        return self._atividade_ativa(obrigatoria=False)
+
     def _pausa_ativa(self, *, obrigatoria: bool) -> tuple[Path, Pausa] | None:
         caminho = self._descobrir_unico(
             self.diretorio_pausas, "pausa", obrigatorio=obrigatoria

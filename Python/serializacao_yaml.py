@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 import types
 from dataclasses import MISSING, fields, is_dataclass
@@ -36,6 +37,7 @@ class ErroSerializacaoYAML(ValueError):
 REGISTRO_MODELOS: dict[str, type[Any]] = {
     nome: getattr(modelos, nome) for nome in modelos.__all__
 }
+_HORARIO_MINUTO = re.compile(r"\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?")
 
 
 class _LoaderSeguro(yaml.SafeLoader):
@@ -106,7 +108,9 @@ def _modelo_registrado(valor: object) -> bool:
     return REGISTRO_MODELOS.get(classe.__name__) is classe
 
 
-def _converter_para_dados(valor: Any, anotacao: Any, caminho: str) -> Any:
+def _converter_para_dados(
+    valor: Any, anotacao: Any, caminho: str, metadados: Any = None
+) -> Any:
     if valor is None:
         return None
     esperado = _sem_none(anotacao)
@@ -134,6 +138,8 @@ def _converter_para_dados(valor: Any, anotacao: Any, caminho: str) -> Any:
     if esperado is time:
         if not isinstance(valor, time):
             _falhar(caminho, "era esperado time")
+        if metadados and metadados.get("unidade") == "HH:MM":
+            return valor.isoformat(timespec="minutes")
         return valor.isoformat()
     if esperado is bool:
         valido = type(valor) is bool
@@ -162,7 +168,10 @@ def modelo_para_dados(modelo: object, *, _caminho: str = "$") -> dict[str, Any]:
             getattr(modelo, campo.name), campo.metadata, f"{_caminho}.{campo.name}"
         )
         resultado[campo.name] = _converter_para_dados(
-            getattr(modelo, campo.name), dicas[campo.name], f"{_caminho}.{campo.name}"
+            getattr(modelo, campo.name),
+            dicas[campo.name],
+            f"{_caminho}.{campo.name}",
+            campo.metadata,
         )
     return resultado
 
@@ -212,15 +221,21 @@ def _converter_temporal(
     esperado: type[date] | type[time] | type[datetime],
     caminho: str,
     origem: str | Path | None,
+    metadados: Any = None,
 ) -> date | time | datetime:
     if not isinstance(valor, str):
         _falhar(caminho, f"era esperado texto ISO 8601 para {esperado.__name__}", origem)
+    if esperado is time and metadados and metadados.get("unidade") == "HH:MM":
+        if _HORARIO_MINUTO.fullmatch(valor) is None:
+            _falhar(caminho, "time inválido: use HH:MM ou HH:MM:SS", origem)
     try:
         convertido = esperado.fromisoformat(valor)
     except ValueError as erro:
         _falhar(caminho, f"{esperado.__name__} ISO 8601 inválido: {valor!r}", origem)
     if esperado is date and isinstance(convertido, datetime):
         _falhar(caminho, "era esperado date sem horário", origem)
+    if esperado is time and metadados and metadados.get("unidade") == "HH:MM":
+        convertido = convertido.replace(second=0, microsecond=0)
     return convertido
 
 
@@ -229,6 +244,7 @@ def _converter_para_modelo(
     anotacao: Any,
     caminho: str,
     origem_arquivo: str | Path | None,
+    metadados: Any = None,
 ) -> Any:
     if valor is None:
         return None
@@ -245,7 +261,9 @@ def _converter_para_modelo(
     if isinstance(esperado, type) and is_dataclass(esperado):
         return _construir_modelo(valor, esperado, caminho, origem_arquivo)
     if esperado in (date, time, datetime):
-        return _converter_temporal(valor, esperado, caminho, origem_arquivo)
+        return _converter_temporal(
+            valor, esperado, caminho, origem_arquivo, metadados
+        )
     if esperado is bool:
         valido = type(valor) is bool
     elif esperado is int:
@@ -313,7 +331,7 @@ def _construir_modelo(
                 _falhar(f"{caminho}.{nome}", "campo obrigatório ausente", origem)
             continue
         convertido = _converter_para_modelo(
-            dados[nome], dicas[nome], f"{caminho}.{nome}", origem
+            dados[nome], dicas[nome], f"{caminho}.{nome}", origem, campo.metadata
         )
         _validar_metadados(convertido, campo.metadata, f"{caminho}.{nome}", origem)
         (argumentos if campo.init else posteriores)[nome] = convertido

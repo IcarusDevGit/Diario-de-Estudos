@@ -19,12 +19,12 @@ class Pausa:
 @dataclass(kw_only=True)
 class RegistroDiario:
     data: date | None = field(default=None, metadata={'opcional': False})
-    dormi_dia_anterior: time | None = field(default=None, metadata={'opcional': True})
-    acordei: time | None = field(default=None, metadata={'opcional': False})
-    levantei_da_cama: time | None = field(default=None, metadata={'opcional': False})
-    cafe_da_manha: time | None = field(default=None, metadata={'opcional': True})
-    remedio: time | None = field(default=None, metadata={'opcional': True})
-    almoco: time | None = field(default=None, metadata={'opcional': True})
+    dormi_dia_anterior: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
+    acordei: time | None = field(default=None, metadata={'opcional': False, 'unidade': 'HH:MM'})
+    levantei_da_cama: time | None = field(default=None, metadata={'opcional': False, 'unidade': 'HH:MM'})
+    cafe_da_manha: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
+    remedio: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
+    almoco: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
     folga: bool | None = field(default=None, metadata={'opcional': False})
     concentracao: int | None = field(default=None, metadata={'opcional': True, 'minimo': 1, 'maximo': 5})
     exercicio_fisico: int | None = field(default=None, metadata={'opcional': True, 'minimo': 1, 'maximo': 5})
@@ -36,7 +36,7 @@ class RegistroDiario:
     alcool: int | None = field(default=None, metadata={'opcional': True, 'minimo': 1, 'maximo': 5})
     sexo_e_masturbacao: int | None = field(default=None, metadata={'opcional': True, 'minimo': 1, 'maximo': 5})
     motivacao: int | None = field(default=None, metadata={'opcional': True, 'minimo': 1, 'maximo': 5})
-    fui_dormir: time | None = field(default=None, metadata={'opcional': True})
+    fui_dormir: time | None = field(default=None, metadata={'opcional': True, 'unidade': 'HH:MM'})
 
     def __post_init__(self) -> None:
         if self.concentracao is not None and self.concentracao < 1:

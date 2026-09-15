@@ -14,6 +14,7 @@ from pymongo.server_api import ServerApi
 __all__ = [
     "ErroConfiguracaoMongoDB",
     "TEMPO_LIMITE_SELECAO_MS",
+    "carregar_mongodb_database",
     "carregar_mongodb_uri",
     "criar_cliente_mongodb",
     "diagnosticar_mongodb",
@@ -28,14 +29,13 @@ class ErroConfiguracaoMongoDB(RuntimeError):
     """Indica configuração inválida ou falha no diagnóstico do MongoDB."""
 
 
-def carregar_mongodb_uri(raiz: str | Path) -> str:
-    """Lê e valida MONGODB_URI sem expor o valor em mensagens de erro."""
+def _carregar_variavel_env(raiz: str | Path, nome: str) -> str:
     caminho = Path(raiz) / ".env"
     try:
         linhas = caminho.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeError) as erro:
         raise ErroConfiguracaoMongoDB(
-            f"MONGODB_URI: não foi possível ler {caminho}"
+            f"{nome}: não foi possível ler {caminho}"
         ) from erro
 
     valores: list[str] = []
@@ -44,24 +44,35 @@ def carregar_mongodb_uri(raiz: str | Path) -> str:
         if not limpa or limpa.startswith("#") or "=" not in limpa:
             continue
         chave, valor = limpa.split("=", 1)
-        if chave.strip() == "MONGODB_URI":
+        if chave.strip() == nome:
             valores.append(valor.strip())
 
     if not valores:
-        raise ErroConfiguracaoMongoDB(f"{caminho}: variável MONGODB_URI ausente")
+        raise ErroConfiguracaoMongoDB(f"{caminho}: variável {nome} ausente")
     if len(valores) > 1:
-        raise ErroConfiguracaoMongoDB(f"{caminho}: variável MONGODB_URI duplicada")
+        raise ErroConfiguracaoMongoDB(f"{caminho}: variável {nome} duplicada")
 
-    uri = valores[0]
-    if not uri:
+    valor = valores[0]
+    if not valor:
         raise ErroConfiguracaoMongoDB(
-            f"{caminho}: variável MONGODB_URI não pode ser vazia"
+            f"{caminho}: variável {nome} não pode ser vazia"
         )
+    return valor
+
+
+def carregar_mongodb_uri(raiz: str | Path) -> str:
+    """Lê e valida MONGODB_URI sem expor o valor em mensagens de erro."""
+    uri = _carregar_variavel_env(raiz, "MONGODB_URI")
     if not uri.startswith(("mongodb://", "mongodb+srv://")):
         raise ErroConfiguracaoMongoDB(
-            f"{caminho}: MONGODB_URI deve usar mongodb:// ou mongodb+srv://"
+            f"{Path(raiz) / '.env'}: MONGODB_URI deve usar mongodb:// ou mongodb+srv://"
         )
     return uri
+
+
+def carregar_mongodb_database(raiz: str | Path) -> str:
+    """Lê o nome não vazio da database usada pela aplicação."""
+    return _carregar_variavel_env(raiz, "MONGODB_DATABASE")
 
 
 def criar_cliente_mongodb(

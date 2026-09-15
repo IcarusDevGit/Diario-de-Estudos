@@ -56,6 +56,41 @@ class SerializacaoYAMLTestCase(unittest.TestCase):
         self.assertEqual(carregada.inicio, inicio)
         self.assertEqual(carregada.inicio.utcoffset(), timedelta(hours=-3))
 
+    def test_horario_de_relatorio_usa_minutos_sem_arredondar(self) -> None:
+        relatorio = RegistroDiario(acordei=time(7, 8, 59, 999999))
+        texto = modelo_para_yaml(relatorio)
+        self.assertIn("acordei: 07:08\n", texto)
+        self.assertNotIn("07:08:59", texto)
+        self.assertEqual(yaml_para_modelo(texto).acordei, time(7, 8))
+
+    def test_horarios_legados_sao_normalizados_e_invalidos_rejeitados(self) -> None:
+        for valor in ("07:08", "07:08:59", "07:08:59.123456"):
+            with self.subTest(valor=valor):
+                relatorio = yaml_para_modelo(
+                    f"classe: RegistroDiario\nacordei: '{valor}'\n"
+                )
+                self.assertEqual(relatorio.acordei, time(7, 8))
+                self.assertIn("acordei: 07:08\n", modelo_para_yaml(relatorio))
+        for valor in ("7:08", "07:8", "07:08:59Z", "07:08:59.1234567"):
+            with self.subTest(valor=valor):
+                with self.assertRaisesRegex(ErroSerializacaoYAML, r"\$\.acordei"):
+                    yaml_para_modelo(
+                        f"classe: RegistroDiario\nacordei: '{valor}'\n"
+                    )
+
+    def test_duracao_e_datetime_mantem_segundos(self) -> None:
+        inicio = datetime(
+            2026, 9, 15, 7, 8, 59, 123456, tzinfo=timezone(timedelta(hours=-3))
+        )
+        tarefa = Tarefa(inicio=inicio)
+        tarefa.duracao = "00:01:59"
+        texto = modelo_para_yaml(tarefa)
+        self.assertIn("07:08:59.123456-03:00", texto)
+        self.assertIn("duracao: 00:01:59", texto)
+        carregada = yaml_para_modelo(texto)
+        self.assertEqual(carregada.inicio, inicio)
+        self.assertEqual(carregada.duracao, "00:01:59")
+
     def test_pausas_aninhadas_e_listas_independentes(self) -> None:
         texto = modelo_para_yaml(Tarefa(pausas=[Pausa(), Pausa()]))
         self.assertEqual(texto.count("classe: Pausa"), 2)

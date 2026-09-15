@@ -118,6 +118,27 @@ class GerenciamentoTarefasTestCase(unittest.TestCase):
             self.gerenciador.iniciar_atividade()
         self.assertEqual(caminho.read_bytes(), invalido)
 
+    def test_consulta_publica_da_atividade_nao_modifica_estado(self) -> None:
+        self.assertIsNone(self.gerenciador.atividade_ativa())
+        caminho = self.gerenciador.iniciar_atividade(Tarefa, nome="ativa")
+        original = caminho.read_bytes()
+        resultado = self.gerenciador.atividade_ativa()
+        self.assertIsNotNone(resultado)
+        self.assertEqual(resultado[0], caminho)  # type: ignore[index]
+        self.assertEqual(caminho.read_bytes(), original)
+
+        outro = caminho.with_name("outra.yaml")
+        outro.write_bytes(original)
+        with self.assertRaisesRegex(ErroGerenciamento, "múltiplos arquivos"):
+            self.gerenciador.atividade_ativa()
+        outro.unlink()
+
+        caminho.write_text("classe: [", encoding="utf-8")
+        invalido = caminho.read_bytes()
+        with self.assertRaisesRegex(ErroGerenciamento, re.escape(str(caminho))):
+            self.gerenciador.atividade_ativa()
+        self.assertEqual(caminho.read_bytes(), invalido)
+
     def test_iniciar_pausa_exige_tarefa_e_impede_segunda(self) -> None:
         with self.assertRaisesRegex(ErroGerenciamento, "não existe tarefa"):
             self.gerenciador.iniciar_pausa()

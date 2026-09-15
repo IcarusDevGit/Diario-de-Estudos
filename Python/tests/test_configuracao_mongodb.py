@@ -13,6 +13,7 @@ from Python.cli import main
 from Python.configuracao_mongodb import (
     ErroConfiguracaoMongoDB,
     TEMPO_LIMITE_SELECAO_MS,
+    carregar_mongodb_database,
     carregar_mongodb_uri,
     criar_cliente_mongodb,
     diagnosticar_mongodb,
@@ -61,6 +62,29 @@ class ConfiguracaoMongoDBTestCase(unittest.TestCase):
     def test_arquivo_env_ausente(self) -> None:
         with self.assertRaisesRegex(ErroConfiguracaoMongoDB, "não foi possível ler"):
             carregar_mongodb_uri(self.raiz)
+
+    def test_carrega_database_valida_ausente_duplicada_e_vazia(self) -> None:
+        arquivo = self.raiz / ".env"
+        arquivo.write_text("MONGODB_DATABASE=diario_estudos\n", encoding="utf-8")
+        self.assertEqual(carregar_mongodb_database(self.raiz), "diario_estudos")
+        for conteudo, mensagem in (
+            ("OUTRA=x\n", "ausente"),
+            ("MONGODB_DATABASE=\n", "vazia"),
+            (
+                "MONGODB_DATABASE=diario_estudos\nMONGODB_DATABASE=outra\n",
+                "duplicada",
+            ),
+        ):
+            with self.subTest(mensagem=mensagem):
+                arquivo.write_text(conteudo, encoding="utf-8")
+                with self.assertRaisesRegex(ErroConfiguracaoMongoDB, mensagem):
+                    carregar_mongodb_database(self.raiz)
+
+    def test_diagnostico_nao_exige_database(self) -> None:
+        self.escrever_env(f"MONGODB_URI={URI_SECRETA}\n")
+        cliente = MagicMock()
+        diagnosticar_mongodb(self.raiz, fabrica=MagicMock(return_value=cliente))
+        cliente.admin.command.assert_called_once_with({"ping": 1})
 
     def test_cria_cliente_com_stable_api_e_timeout_sem_operacoes(self) -> None:
         self.escrever_env(f"MONGODB_URI={URI_SECRETA}\n")

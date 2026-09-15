@@ -9,6 +9,7 @@ from typing import Sequence
 
 from Python.Classes import SessaoEstudo, SessaoExercicio, Tarefa
 from Python.configuracao_mongodb import ErroConfiguracaoMongoDB, diagnosticar_mongodb
+from Python.gerenciamento_dia import ErroGerenciamentoDia, GerenciadorDia
 from Python.gerenciamento_tarefas import ErroGerenciamento, GerenciadorTarefas
 
 
@@ -25,11 +26,13 @@ def criar_parser() -> argparse.ArgumentParser:
     sessao.add_argument("sessao", choices=("estudo", "exercicio"))
     sessao.add_argument("--nome")
     tipos_inicio.add_parser("pausa")
+    tipos_inicio.add_parser("dia")
 
     finalizar = acoes.add_parser("finalizar")
     tipos_final = finalizar.add_subparsers(dest="tipo", required=True)
     tipos_final.add_parser("tarefa")
     tipos_final.add_parser("pausa")
+    tipos_final.add_parser("dia")
 
     diagnosticar = acoes.add_parser("diagnosticar")
     tipos_diagnostico = diagnosticar.add_subparsers(
@@ -43,6 +46,10 @@ def executar(argumentos: argparse.Namespace) -> Path | str:
     if argumentos.acao == "diagnosticar" and argumentos.tipo_diagnostico == "mongodb":
         diagnosticar_mongodb(argumentos.raiz)
         return "Conexão com MongoDB estabelecida."
+    if argumentos.acao == "iniciar" and argumentos.tipo == "dia":
+        return GerenciadorDia(argumentos.raiz).iniciar_dia()
+    if argumentos.acao == "finalizar" and argumentos.tipo == "dia":
+        return GerenciadorDia(argumentos.raiz).finalizar_dia()
     gerenciador = GerenciadorTarefas(argumentos.raiz)
     if argumentos.acao == "iniciar" and argumentos.tipo == "tarefa":
         return gerenciador.iniciar_atividade(Tarefa, nome=argumentos.nome)
@@ -63,7 +70,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         argumentos = parser.parse_args(argv)
         caminho = executar(argumentos)
-    except (ErroGerenciamento, ErroConfiguracaoMongoDB) as erro:
+    except (ErroGerenciamento, ErroGerenciamentoDia, ErroConfiguracaoMongoDB) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 1
     print(caminho)

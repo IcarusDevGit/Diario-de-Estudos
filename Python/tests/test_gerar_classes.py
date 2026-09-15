@@ -140,6 +140,25 @@ class GeradorTestCase(unittest.TestCase):
         mapa_pausa = {campo.name: campo for campo in fields(modulo.Pausa)}
         self.assertEqual(mapa_pausa["duracao"].type, "str | None")
         self.assertEqual(mapa_pausa["duracao"].metadata["unidade"], "HH:MM:SS")
+        mapa_relatorio = {
+            campo.name: campo for campo in fields(modulo.RegistroDiario)
+        }
+        horarios = {
+            "dormi_dia_anterior",
+            "acordei",
+            "levantei_da_cama",
+            "cafe_da_manha",
+            "remedio",
+            "almoco",
+            "fui_dormir",
+        }
+        self.assertTrue(
+            all(
+                mapa_relatorio[nome].metadata["unidade"] == "HH:MM"
+                for nome in horarios
+            )
+        )
+        self.assertNotIn("unidade", mapa_relatorio["data"].metadata)
         self.assertIn("opcional", mapa["inicio"].metadata)
         with self.assertRaises(TypeError):
             modulo.Tarefa(duracao="00:00:01")

@@ -29,7 +29,7 @@ Cada entrada de `campos` SHALL ser um objeto com um `tipo` explícito. Atributos
 - **THEN** identifica o campo como `str` calculado com unidade/formato `HH:MM:SS`, e não como um valor livre obrigatório
 
 ### Requirement: Tipos temporais coerentes
-Os instantes de início e fim de tarefas e pausas SHALL usar `datetime`. A data civil do registro diário SHALL usar `date`, e os horários associados àquele dia SHALL usar `time`.
+Os instantes de início e fim de tarefas e pausas SHALL usar `datetime`. A data civil do registro diário SHALL usar `date`, e os horários associados àquele dia SHALL usar `time` com unidade/formato `HH:MM` declarada no esquema.
 
 #### Scenario: Intervalo que atravessa a meia-noite
 - **WHEN** uma tarefa ou pausa começa em um dia e termina no dia seguinte
@@ -37,7 +37,7 @@ Os instantes de início e fim de tarefas e pausas SHALL usar `datetime`. A data 
 
 #### Scenario: Horário do registro diário
 - **WHEN** um consumidor lê um horário como `acordei` no registro diário
-- **THEN** encontra o tipo `time`, enquanto o campo `data` possui o tipo `date`
+- **THEN** encontra o tipo `time` com unidade/formato `HH:MM`, enquanto o campo `data` possui o tipo `date`
 
 ### Requirement: Estado incompleto representável
 Campos que somente são conhecidos após preenchimento ou finalização SHALL ser opcionais. Coleções e valores com um padrão natural SHALL declarar esse padrão no esquema.

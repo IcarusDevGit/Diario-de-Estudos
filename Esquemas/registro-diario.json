@@ -7,26 +7,32 @@
     },
     "dormi_dia_anterior": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": true
     },
     "acordei": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": false
     },
     "levantei_da_cama": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": false
     },
     "cafe_da_manha": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": true
     },
     "remedio": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": true
     },
     "almoco": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": true
     },
     "folga": {
@@ -95,6 +101,7 @@
     },
     "fui_dormir": {
       "tipo": "time",
+      "unidade": "HH:MM",
       "opcional": true
     }
   }
