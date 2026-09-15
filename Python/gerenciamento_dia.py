@@ -24,6 +24,8 @@ from Python.gerenciamento_tarefas import (
     carregar_fuso_horario,
 )
 from Python.serializacao_yaml import ErroSerializacaoYAML, ler_yaml, salvar_yaml
+from Python.ciclo_dia import ErroCicloDia, ciclo_aberto, listar_registros
+from Python.persistencia_dia import COLLECTION_DIAS, ErroPersistenciaDia, persistir_dia
 
 
 __all__ = [
@@ -34,7 +36,7 @@ __all__ = [
 ]
 
 
-COLLECTION_REGISTROS_DIARIOS = "registros_diarios"
+COLLECTION_REGISTROS_DIARIOS = COLLECTION_DIAS
 _HORARIO_ISO = re.compile(r"\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?")
 ConsultaSono = Callable[[date], time | None]
 
@@ -69,7 +71,7 @@ def consultar_fui_dormir_anterior(
         collection = cliente[database][COLLECTION_REGISTROS_DIARIOS]
         cursor = collection.find(
             {"data": data_anterior.isoformat()},
-            {"_id": 0, "fui_dormir": 1},
+            {"_id": 0, "relatorios": 1},
         ).limit(2)
         documentos = list(cursor)
     except PyMongoError as erro:
@@ -85,7 +87,11 @@ def consultar_fui_dormir_anterior(
         raise ErroGerenciamentoDia(
             "histórico MongoDB inconsistente: mais de um relatório para a mesma data"
         )
-    return _converter_horario_remoto(documentos[0].get("fui_dormir"))
+    relatorios=documentos[0].get("relatorios")
+    if not isinstance(relatorios,list): raise ErroGerenciamentoDia("histórico MongoDB inconsistente: relatorios inválido")
+    diarios=[r for r in relatorios if isinstance(r,dict) and r.get("classe")=="RegistroDiario"]
+    if len(diarios)!=1: raise ErroGerenciamentoDia("histórico MongoDB inconsistente: RegistroDiario ausente ou duplicado")
+    return _converter_horario_remoto(diarios[0].get("fui_dormir"))
 
 
 class GerenciadorDia:
@@ -99,6 +105,7 @@ class GerenciadorDia:
         fuso: tzinfo | None = None,
         consulta_sono: ConsultaSono | None = None,
         gerenciador_tarefas: GerenciadorTarefas | None = None,
+        persistencia: Callable[[str | Path, date], Any] | None = None,
     ) -> None:
         self.raiz = Path(raiz)
         self.diretorio_relatorios = self.raiz / "Relatórios"
@@ -112,6 +119,7 @@ class GerenciadorDia:
         self._gerenciador_tarefas = gerenciador_tarefas or GerenciadorTarefas(
             self.raiz, fuso=self.fuso
         )
+        self._persistencia = persistencia or persistir_dia
 
     def _agora(self) -> datetime:
         instante = self._relogio()
@@ -132,6 +140,10 @@ class GerenciadorDia:
         caminho = self._caminho_relatorio(hoje)
         if caminho.exists():
             raise ErroGerenciamentoDia(f"relatório diário já existe: {caminho}")
+        try:
+            aberto=ciclo_aberto(self.raiz,obrigatorio=False)
+        except ErroCicloDia as erro: raise ErroGerenciamentoDia(str(erro)) from erro
+        if aberto is not None: raise ErroGerenciamentoDia(f"ciclo diário ainda aberto: {aberto[0]}")
         try:
             sono_anterior = self._consulta_sono(hoje - timedelta(days=1))
         except (ErroConfiguracaoMongoDB, ErroGerenciamentoDia):
@@ -173,9 +185,14 @@ class GerenciadorDia:
 
     def finalizar_dia(self) -> Path:
         instante = self._agora()
-        hoje = instante.date()
-        caminho = self._caminho_relatorio(hoje)
-        relatorio = self._carregar_relatorio(hoje, caminho)
+        try: caminho,relatorio=ciclo_aberto(self.raiz)
+        except ErroCicloDia as erro:
+            if "nenhum" in str(erro):
+                registros = listar_registros(self.raiz)
+                if registros: raise ErroGerenciamentoDia(f"dia já foi finalizado: {registros[-1][0]}") from erro
+                raise ErroGerenciamentoDia("relatório diário não encontrado") from erro
+            raise ErroGerenciamentoDia(str(erro)) from erro
+        hoje=relatorio.data
         if relatorio.fui_dormir is not None:
             raise ErroGerenciamentoDia(f"dia já foi finalizado: {caminho}")
         ausentes = self._campos_obrigatorios_ausentes(relatorio)
@@ -201,4 +218,6 @@ class GerenciadorDia:
             raise ErroGerenciamentoDia(
                 f"não foi possível finalizar o relatório diário: {caminho}"
             ) from erro
+        try: self._persistencia(self.raiz, hoje)
+        except ErroPersistenciaDia as erro: raise ErroGerenciamentoDia(str(erro)) from erro
         return caminho

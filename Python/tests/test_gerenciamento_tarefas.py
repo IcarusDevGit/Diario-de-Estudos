@@ -5,11 +5,11 @@ import re
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from Python.Classes import Pausa, SessaoEstudo, SessaoExercicio, Tarefa
+from Python.Classes import Pausa, RegistroDiario, SessaoEstudo, SessaoExercicio, Tarefa
 from Python.cli import main
 from Python.duracao import duracao_para_segundos, formatar_intervalo
 from Python.gerenciamento_tarefas import (
@@ -31,6 +31,10 @@ class GerenciamentoTarefasTestCase(unittest.TestCase):
         self.instante = datetime(2026, 9, 14, 9, 30, 15, tzinfo=FUSO)
         self.gerenciador = GerenciadorTarefas(
             self.raiz, relogio=lambda: self.instante, fuso=FUSO
+        )
+        salvar_yaml(
+            RegistroDiario(data=date(2026, 9, 14)),
+            self.raiz / "Relatórios" / "RD-2026-09-14.yaml",
         )
 
     def tearDown(self) -> None:
@@ -276,6 +280,10 @@ class CLITestCase(unittest.TestCase):
         self.raiz = Path(self.temporario.name)
         (self.raiz / ".env").write_text(
             "FUSO_HORARIO=UTC-03:00\n", encoding="utf-8"
+        )
+        salvar_yaml(
+            RegistroDiario(data=datetime.now(FUSO).date()),
+            self.raiz / "Relatórios" / f"RD-{datetime.now(FUSO).date().isoformat()}.yaml",
         )
 
     def tearDown(self) -> None:

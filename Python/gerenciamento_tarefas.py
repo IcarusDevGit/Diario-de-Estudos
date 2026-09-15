@@ -18,6 +18,7 @@ from Python.duracao import (
     intervalo_microssegundos,
 )
 from Python.serializacao_yaml import ErroSerializacaoYAML, ler_yaml, salvar_yaml
+from Python.ciclo_dia import ErroCicloDia, ciclo_aberto
 
 
 __all__ = [
@@ -207,6 +208,10 @@ class GerenciadorTarefas:
     ) -> Path:
         if classe not in TIPOS_ATIVIDADE:
             raise ErroGerenciamento(f"classe de atividade não permitida: {classe!r}")
+        try:
+            _, registro = ciclo_aberto(self.raiz)
+        except ErroCicloDia as erro:
+            raise ErroGerenciamento(str(erro)) from erro
         existente = self._atividade_ativa(obrigatoria=False)
         if existente is not None:
             caminho, atividade = existente
@@ -214,7 +219,7 @@ class GerenciadorTarefas:
                 f"já existe {type(atividade).__name__} em andamento: {caminho}"
             )
         caminho = self.diretorio_ativas / "tarefa.yaml"
-        atividade = classe(inicio=self._agora(), nome=nome)
+        atividade = classe(dia=registro.data, inicio=self._agora(), nome=nome)
         try:
             salvar_yaml(atividade, caminho)
         except ErroSerializacaoYAML as erro:

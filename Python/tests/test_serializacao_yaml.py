@@ -20,7 +20,7 @@ from Python.serializacao_yaml import (
 class SerializacaoYAMLTestCase(unittest.TestCase):
     def test_tarefa_incompleta_unicode_e_ordem(self) -> None:
         texto = modelo_para_yaml(Tarefa(nome="Revisão", notas="Atenção à sintaxe"))
-        self.assertTrue(texto.startswith("classe: Tarefa\ninicio: null\n"))
+        self.assertTrue(texto.startswith("classe: Tarefa\ndia: null\ninicio: null\n"))
         self.assertIn("fim: null", texto)
         self.assertIn("duracao: null", texto)
         self.assertIn("Revisão", texto)

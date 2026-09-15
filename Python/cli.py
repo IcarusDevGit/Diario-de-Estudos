@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Sequence
 
@@ -11,6 +12,7 @@ from Python.Classes import SessaoEstudo, SessaoExercicio, Tarefa
 from Python.configuracao_mongodb import ErroConfiguracaoMongoDB, diagnosticar_mongodb
 from Python.gerenciamento_dia import ErroGerenciamentoDia, GerenciadorDia
 from Python.gerenciamento_tarefas import ErroGerenciamento, GerenciadorTarefas
+from Python.persistencia_dia import ErroPersistenciaDia, persistir_dia
 
 
 def criar_parser() -> argparse.ArgumentParser:
@@ -34,6 +36,11 @@ def criar_parser() -> argparse.ArgumentParser:
     tipos_final.add_parser("pausa")
     tipos_final.add_parser("dia")
 
+    persistir = acoes.add_parser("persistir")
+    tipos_persistir = persistir.add_subparsers(dest="tipo", required=True)
+    persistir_dia_parser = tipos_persistir.add_parser("dia")
+    persistir_dia_parser.add_argument("--data", type=date.fromisoformat)
+
     diagnosticar = acoes.add_parser("diagnosticar")
     tipos_diagnostico = diagnosticar.add_subparsers(
         dest="tipo_diagnostico", required=True
@@ -50,6 +57,8 @@ def executar(argumentos: argparse.Namespace) -> Path | str:
         return GerenciadorDia(argumentos.raiz).iniciar_dia()
     if argumentos.acao == "finalizar" and argumentos.tipo == "dia":
         return GerenciadorDia(argumentos.raiz).finalizar_dia()
+    if argumentos.acao == "persistir" and argumentos.tipo == "dia":
+        return persistir_dia(argumentos.raiz, argumentos.data).isoformat()
     gerenciador = GerenciadorTarefas(argumentos.raiz)
     if argumentos.acao == "iniciar" and argumentos.tipo == "tarefa":
         return gerenciador.iniciar_atividade(Tarefa, nome=argumentos.nome)
@@ -70,7 +79,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         argumentos = parser.parse_args(argv)
         caminho = executar(argumentos)
-    except (ErroGerenciamento, ErroGerenciamentoDia, ErroConfiguracaoMongoDB) as erro:
+    except (ErroGerenciamento, ErroGerenciamentoDia, ErroConfiguracaoMongoDB, ErroPersistenciaDia) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 1
     print(caminho)

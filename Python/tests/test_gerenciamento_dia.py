@@ -62,7 +62,7 @@ class ConsultaHistoricoTestCase(unittest.TestCase):
 
     def test_consulta_por_data_com_projecao_limite_e_sem_escrita(self) -> None:
         resultado, cliente, collection, cursor = self.consultar(
-            [{"fui_dormir": "23:10:05"}]
+            [{"relatorios": [{"classe": "RegistroDiario", "fui_dormir": "23:10:05"}]}]
         )
         self.assertEqual(resultado, time(23, 10))
         cliente.__getitem__.assert_called_once_with("diario_estudos")
@@ -70,7 +70,7 @@ class ConsultaHistoricoTestCase(unittest.TestCase):
             COLLECTION_REGISTROS_DIARIOS
         )
         collection.find.assert_called_once_with(
-            {"data": "2026-09-14"}, {"_id": 0, "fui_dormir": 1}
+            {"data": "2026-09-14"}, {"_id": 0, "relatorios": 1}
         )
         cursor.limit.assert_called_once_with(2)
         cliente.close.assert_called_once_with()
@@ -86,19 +86,19 @@ class ConsultaHistoricoTestCase(unittest.TestCase):
         for valor in ("23:10", "23:10:59", "23:10:59.999999"):
             with self.subTest(valor=valor):
                 resultado, cliente, _, _ = self.consultar(
-                    [{"fui_dormir": valor}]
+                    [{"relatorios": [{"classe": "RegistroDiario", "fui_dormir": valor}]}]
                 )
                 self.assertEqual(resultado, time(23, 10))
                 cliente.close.assert_called_once_with()
 
     def test_rejeita_horario_ausente_invalido_e_duplicidade(self) -> None:
         for documentos, mensagem in (
-            ([{}], "fui_dormir"),
-            ([{"fui_dormir": None}], "fui_dormir"),
-            ([{"fui_dormir": "25:00:00"}], "fui_dormir"),
-            ([{"fui_dormir": "23:1"}], "fui_dormir"),
+            ([{}], "relatorios"),
+            ([{"relatorios": [{"classe": "RegistroDiario", "fui_dormir": None}]}], "fui_dormir"),
+            ([{"relatorios": [{"classe": "RegistroDiario", "fui_dormir": "25:00:00"}]}], "fui_dormir"),
+            ([{"relatorios": [{"classe": "RegistroDiario", "fui_dormir": "23:1"}]}], "fui_dormir"),
             (
-                [{"fui_dormir": "22:00:00"}, {"fui_dormir": "23:00:00"}],
+                [{"relatorios": []}, {"relatorios": []}],
                 "mais de um relatório",
             ),
         ):
@@ -134,12 +134,14 @@ class GerenciadorDiaTestCase(unittest.TestCase):
         self.consulta = MagicMock(return_value=None)
         self.tarefas = MagicMock()
         self.tarefas.atividade_ativa.return_value = None
+        self.persistencia = MagicMock()
         self.gerenciador = GerenciadorDia(
             self.raiz,
             relogio=lambda: INSTANTE,
             fuso=FUSO,
             consulta_sono=self.consulta,
             gerenciador_tarefas=self.tarefas,
+            persistencia=self.persistencia,
         )
 
     def tearDown(self) -> None:
@@ -191,12 +193,12 @@ class GerenciadorDiaTestCase(unittest.TestCase):
         self.caminho.write_text("classe: [", encoding="utf-8")
         for preparacao, mensagem in (
             (lambda: None, str(self.caminho)),
-            (lambda: salvar_yaml(Tarefa(), self.caminho), "classe incompatível"),
+            (lambda: salvar_yaml(Tarefa(), self.caminho), "incompatível"),
             (
                 lambda: salvar_yaml(
                     RegistroDiario(data=date(2026, 9, 14)), self.caminho
                 ),
-                "não corresponde",
+                "diverge",
             ),
         ):
             with self.subTest(mensagem=mensagem):
@@ -310,7 +312,8 @@ class GerenciamentoDiaCLITestCase(unittest.TestCase):
         self.assertIn("em andamento", erro)
         tarefa.unlink()
 
-        codigo, saida, erro = self.chamar("finalizar", "dia")
+        with patch("Python.gerenciamento_dia.persistir_dia"):
+            codigo, saida, erro = self.chamar("finalizar", "dia")
         self.assertEqual((codigo, erro), (0, ""))
         self.assertEqual(Path(saida.strip()), caminho)
         self.assertIsNotNone(ler_yaml(caminho).fui_dormir)

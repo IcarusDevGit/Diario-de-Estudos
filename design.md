@@ -42,5 +42,5 @@ Comandos:
     o campo 'duracao' é preenchido automaticamente com o valor do campo 'fim' - 'inicio' 
 
 persistir-dia-no-mongodb
-consolidar-cli
+criar relatórios
     

@@ -82,6 +82,7 @@ class RegistroDiario:
 
 @dataclass(kw_only=True)
 class Tarefa:
+    dia: date | None = field(default=None, metadata={'opcional': True})
     inicio: datetime | None = field(default=None, metadata={'opcional': False})
     fim: datetime | None = field(default=None, metadata={'opcional': True})
     pausas: list[Pausa] | None = field(default_factory=list, metadata={'opcional': False})

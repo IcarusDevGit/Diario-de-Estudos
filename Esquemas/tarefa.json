@@ -2,6 +2,10 @@
   "versao": 1,
   "classe": "Tarefa",
   "campos": {
+    "dia": {
+      "tipo": "date",
+      "opcional": true
+    },
     "inicio": {
       "tipo": "datetime"
     },
