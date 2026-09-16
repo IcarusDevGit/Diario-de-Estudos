@@ -41,6 +41,7 @@ Comandos:
     fim é preenchido com a hora atual
     o campo 'duracao' é preenchido automaticamente com o valor do campo 'fim' - 'inicio' 
 
-criar relatórios
-/opsx:explore permitir notas de critérios parciais (1,5; 2,5; 3,5; 4,5)
+
+
+/opsx:explore ainda e necessário deletar relatórios e tarefas após finalizar o dia com sucesso e persistir o dia no MongoDB
     

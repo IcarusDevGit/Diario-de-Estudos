@@ -4,22 +4,25 @@
     "classe_mae": "Tarefa",
     "campos": {
         "performance": {
-            "tipo": "int",
+            "tipo": "float",
             "opcional": true,
             "minimo": 1,
-            "maximo": 5
+            "maximo": 5,
+            "passo": 0.5
         },
         "motivacao": {
-            "tipo": "int",
+            "tipo": "float",
             "opcional": true,
             "minimo": 1,
-            "maximo": 5
+            "maximo": 5,
+            "passo": 0.5
         },
         "procrastinacao": {
-            "tipo": "int",
+            "tipo": "float",
             "opcional": true,
             "minimo": 1,
-            "maximo": 5
+            "maximo": 5,
+            "passo": 0.5
         }
     }
 }

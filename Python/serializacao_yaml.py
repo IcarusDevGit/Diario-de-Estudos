@@ -9,6 +9,7 @@ import types
 from dataclasses import MISSING, fields, is_dataclass
 from datetime import date, datetime, time
 from pathlib import Path
+from math import isclose
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import yaml
@@ -146,14 +147,14 @@ def _converter_para_dados(
     elif esperado is int:
         valido = type(valor) is int
     elif esperado is float:
-        valido = type(valor) is float
+        valido = type(valor) in (int, float)
     elif esperado is str:
         valido = type(valor) is str
     else:
         _falhar(caminho, f"anotação não suportada: {esperado!r}")
     if not valido:
         _falhar(caminho, f"era esperado {esperado.__name__}")
-    return valor
+    return float(valor) if esperado is float else valor
 
 
 def modelo_para_dados(modelo: object, *, _caminho: str = "$") -> dict[str, Any]:
@@ -269,14 +270,14 @@ def _converter_para_modelo(
     elif esperado is int:
         valido = type(valor) is int
     elif esperado is float:
-        valido = type(valor) is float
+        valido = type(valor) in (int, float)
     elif esperado is str:
         valido = type(valor) is str
     else:
         _falhar(caminho, f"anotação não suportada: {esperado!r}", origem_arquivo)
     if not valido:
         _falhar(caminho, f"era esperado {esperado.__name__}", origem_arquivo)
-    return valor
+    return float(valor) if esperado is float else valor
 
 
 def _validar_metadados(
@@ -291,6 +292,11 @@ def _validar_metadados(
         _falhar(caminho, f"valor abaixo de minimo={metadados['minimo']}", origem)
     if "maximo" in metadados and valor > metadados["maximo"]:
         _falhar(caminho, f"valor acima de maximo={metadados['maximo']}", origem)
+    if "passo" in metadados:
+        base = metadados.get("minimo", 0)
+        quociente = (valor - base) / metadados["passo"]
+        if not isclose(quociente, round(quociente), abs_tol=1e-9):
+            _falhar(caminho, f"valor viola passo={metadados['passo']}", origem)
     if metadados.get("unidade") == "HH:MM:SS":
         try:
             duracao_para_segundos(valor, caminho=caminho)

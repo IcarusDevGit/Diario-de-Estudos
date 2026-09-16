@@ -38,64 +38,74 @@
       "opcional": false
     },
     "concentracao": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "exercicio_fisico": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "ativacao_mental": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "procrastinacao": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "compulsao_alimentar": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "estresse": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "qualidade_do_sono": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "alcool": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "sexo_e_masturbacao": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "motivacao": {
-      "tipo": "int",
+      "tipo": "float",
       "opcional": true,
       "minimo": 1,
-      "maximo": 5
+      "maximo": 5,
+      "passo": 0.5
     },
     "fui_dormir": {
       "tipo": "time",

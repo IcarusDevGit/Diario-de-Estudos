@@ -29,6 +29,7 @@ CHAVES_CAMPO = frozenset(
         "itens",
         "minimo",
         "maximo",
+        "passo",
     }
 )
 
@@ -124,6 +125,18 @@ def _normalizar_documento(arquivo: Path, documento: object) -> ModeloEsquema:
                         arquivo,
                         f"campo {nome!r}: {limite!r} exige tipo numérico",
                     )
+        if "passo" in valor:
+            passo = valor["passo"]
+            if (
+                tipo not in {"int", "float"}
+                or not isinstance(passo, (int, float))
+                or isinstance(passo, bool)
+                or passo <= 0
+            ):
+                raise _erro(
+                    arquivo,
+                    f"campo {nome!r}: 'passo' exige número positivo em tipo numérico",
+                )
         if "minimo" in valor and "maximo" in valor and valor["minimo"] > valor["maximo"]:
             raise _erro(arquivo, f"campo {nome!r}: minimo não pode superar maximo")
         if "unidade" in valor and not isinstance(valor["unidade"], str):
@@ -194,7 +207,7 @@ def _anotacao(campo: dict[str, Any]) -> str:
 
 def _metadados(campo: dict[str, Any]) -> str:
     valores: dict[str, Any] = {"opcional": bool(campo.get("opcional", False))}
-    for chave in ("calculado", "unidade", "minimo", "maximo"):
+    for chave in ("calculado", "unidade", "minimo", "maximo", "passo"):
         if chave in campo:
             valores[chave] = campo[chave]
     conteudo = ", ".join(f"{chave!r}: {valor!r}" for chave, valor in valores.items())
@@ -223,6 +236,7 @@ def renderizar(modelos: list[ModeloEsquema]) -> str:
         "",
         "from dataclasses import dataclass, field",
         "from datetime import date, datetime, time",
+        "from math import isclose",
         "",
         f"__all__ = {tuple(modelo.classe for modelo in modelos)!r}",
         "",
@@ -249,6 +263,17 @@ def renderizar(modelos: list[ModeloEsquema]) -> str:
                     [
                         f"        if self.{nome} is not None and self.{nome} {operador} {limite!r}:",
                         f"            raise ValueError({modelo.classe!r} + '.{nome} viola {chave}={limite}')",
+                    ]
+                )
+            if "passo" in campo:
+                verificacoes += 1
+                passo = campo["passo"]
+                base = campo.get("minimo", 0)
+                quociente = f"(self.{nome} - {base!r}) / {passo!r}"
+                linhas.extend(
+                    [
+                        f"        if self.{nome} is not None and not isclose({quociente}, round({quociente}), abs_tol=1e-9):",
+                        f"            raise ValueError({modelo.classe!r} + '.{nome} viola passo={passo}')",
                     ]
                 )
         if not modelo.classe_mae and verificacoes == 0:

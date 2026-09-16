@@ -215,6 +215,43 @@ class GeradorTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SessaoEstudo.concentracao.*maximo=5"):
             modulo.SessaoEstudo(concentracao=6)
 
+    def test_valida_definicao_e_incrementos_de_passo(self) -> None:
+        invalidos = [
+            {"tipo": "str", "passo": 0.5},
+            {"tipo": "float", "passo": 0},
+            {"tipo": "float", "passo": -0.5},
+            {"tipo": "float", "passo": True},
+        ]
+        for campo in invalidos:
+            with self.subTest(campo=campo):
+                self.escrever("base.json", self.esquema(campos={"x": campo}))
+                with self.assertRaisesRegex(gerar_classes.ErroEsquema, "passo"):
+                    gerar_classes.carregar_esquemas(self.esquemas)
+
+        self.escrever(
+            "base.json",
+            self.esquema(
+                campos={
+                    "nota": {
+                        "tipo": "float",
+                        "minimo": 1,
+                        "maximo": 5,
+                        "passo": 0.5,
+                    }
+                }
+            ),
+        )
+        gerar_classes.executar(self.esquemas, self.destino)
+        modulo = self.carregar_modulo()
+        campo = fields(modulo.Base)[0]
+        self.assertEqual(campo.metadata["passo"], 0.5)
+        for valor in (None, 1, 1.5, 5):
+            modulo.Base(nota=valor)
+        for valor in (0.5, 2.3, 5.5):
+            with self.subTest(valor=valor):
+                with self.assertRaises(ValueError):
+                    modulo.Base(nota=valor)
+
     def test_determinismo_check_e_cabecalho(self) -> None:
         self.escrever("base.json", self.esquema())
         gerar_classes.executar(self.esquemas, self.destino)

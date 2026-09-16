@@ -171,6 +171,31 @@ class SerializacaoYAMLTestCase(unittest.TestCase):
         self.assertEqual(modelo_para_yaml(yaml_para_modelo(original)), original)
         self.assertEqual(modelo_para_yaml(SessaoEstudo()), modelo_para_yaml(SessaoEstudo()))
 
+    def test_avaliacoes_intermediarias_e_inteiros_legados(self) -> None:
+        legado = yaml_para_modelo("classe: SessaoEstudo\nconcentracao: 3\n")
+        self.assertEqual(legado.concentracao, 3.0)
+        self.assertIs(type(legado.concentracao), float)
+        self.assertIn("concentracao: 3.0\n", modelo_para_yaml(legado))
+
+        intermediaria = yaml_para_modelo(
+            "classe: SessaoEstudo\nconcentracao: 3.5\n"
+        )
+        self.assertEqual(intermediaria.concentracao, 3.5)
+        serializado = modelo_para_yaml(intermediaria)
+        self.assertIn("concentracao: 3.5\n", serializado)
+        self.assertEqual(modelo_para_yaml(yaml_para_modelo(serializado)), serializado)
+
+    def test_avaliacoes_rejeitam_passo_texto_e_booleano(self) -> None:
+        casos = ("2.3", "'3.5'", "'3,5'", "true")
+        for valor in casos:
+            with self.subTest(valor=valor):
+                with self.assertRaisesRegex(
+                    ErroSerializacaoYAML, r"\$\.concentracao"
+                ):
+                    yaml_para_modelo(
+                        f"classe: SessaoEstudo\nconcentracao: {valor}\n"
+                    )
+
     def test_rejeita_classe_ausente_desconhecida_e_incompativel(self) -> None:
         casos = [
             ("nome: teste\n", "$.classe"),
