@@ -183,7 +183,7 @@ class GerenciadorDia:
             and getattr(relatorio, campo.name) is None
         ]
 
-    def finalizar_dia(self) -> Path:
+    def finalizar_dia(self) -> date:
         instante = self._agora()
         try: caminho,relatorio=ciclo_aberto(self.raiz)
         except ErroCicloDia as erro:
@@ -220,4 +220,4 @@ class GerenciadorDia:
             ) from erro
         try: self._persistencia(self.raiz, hoje)
         except ErroPersistenciaDia as erro: raise ErroGerenciamentoDia(str(erro)) from erro
-        return caminho
+        return hoje

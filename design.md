@@ -42,6 +42,6 @@ Comandos:
     o campo 'duracao' é preenchido automaticamente com o valor do campo 'fim' - 'inicio' 
 
 
-
-/opsx:explore ainda e necessário deletar relatórios e tarefas após finalizar o dia com sucesso e persistir o dia no MongoDB
-    
+É necessário diferenciar sessão de estudo de sessão de programação
+sessão de estudos terá campo de assuntos com todos os módulos estudados
+sessão de programação terá campo de etapas com todos as etapas realizadas durante a sessão

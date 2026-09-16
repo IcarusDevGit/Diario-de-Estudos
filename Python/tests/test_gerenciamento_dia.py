@@ -19,6 +19,7 @@ from Python.gerenciamento_dia import (
     consultar_fui_dormir_anterior,
 )
 from Python.gerenciamento_tarefas import ErroGerenciamento
+from Python.persistencia_dia import ErroPersistenciaDia, persistir_dia
 from Python.serializacao_yaml import ler_yaml, salvar_yaml
 
 
@@ -244,7 +245,7 @@ class GerenciadorDiaTestCase(unittest.TestCase):
         relatorio.motivacao = 4
         salvar_yaml(relatorio, self.caminho)
         resultado = self.gerenciador.finalizar_dia()
-        self.assertEqual(resultado, self.caminho)
+        self.assertEqual(resultado, date(2026, 9, 15))
         finalizado = ler_yaml(self.caminho)
         self.assertEqual(finalizado.fui_dormir, time(23, 41))
         self.assertIn("fui_dormir: '23:41'", self.caminho.read_text(encoding="utf-8"))
@@ -269,6 +270,39 @@ class GerenciadorDiaTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ErroGerenciamentoDia, "já foi finalizado"):
             self.gerenciador.finalizar_dia()
         self.assertEqual(self.caminho.read_bytes(), original)
+
+    def test_finalizacao_real_persiste_remove_e_retorna_data(self) -> None:
+        (self.raiz / ".env").write_text(
+            "MONGODB_URI=mongodb://teste\nMONGODB_DATABASE=diario_estudos\n",
+            encoding="utf-8",
+        )
+        salvar_yaml(self.relatorio_pronto(), self.caminho)
+        cliente = MagicMock()
+        gerenciador = GerenciadorDia(
+            self.raiz,
+            relogio=lambda: INSTANTE,
+            fuso=FUSO,
+            consulta_sono=self.consulta,
+            gerenciador_tarefas=self.tarefas,
+            persistencia=lambda raiz, data_ciclo: persistir_dia(
+                raiz, data_ciclo, fabrica=MagicMock(return_value=cliente)
+            ),
+        )
+
+        self.assertEqual(gerenciador.finalizar_dia(), date(2026, 9, 15))
+        self.assertFalse(self.caminho.exists())
+        cliente.__getitem__.return_value.__getitem__.return_value.replace_one.assert_called_once()
+
+    def test_falha_de_limpeza_permanece_finalizado_e_e_identificada(self) -> None:
+        salvar_yaml(self.relatorio_pronto(), self.caminho)
+        self.persistencia.side_effect = ErroPersistenciaDia(
+            "persistência confirmada; falha ao limpar arquivos locais: teste"
+        )
+
+        with self.assertRaisesRegex(ErroGerenciamentoDia, "falha ao limpar"):
+            self.gerenciador.finalizar_dia()
+
+        self.assertEqual(ler_yaml(self.caminho).fui_dormir, time(23, 41))
 
 
 class GerenciamentoDiaCLITestCase(unittest.TestCase):
@@ -315,7 +349,7 @@ class GerenciamentoDiaCLITestCase(unittest.TestCase):
         with patch("Python.gerenciamento_dia.persistir_dia"):
             codigo, saida, erro = self.chamar("finalizar", "dia")
         self.assertEqual((codigo, erro), (0, ""))
-        self.assertEqual(Path(saida.strip()), caminho)
+        self.assertEqual(saida.strip(), date.today().isoformat())
         self.assertIsNotNone(ler_yaml(caminho).fui_dormir)
 
     def test_cli_propaga_historico_e_sanitiza_falha(self) -> None:

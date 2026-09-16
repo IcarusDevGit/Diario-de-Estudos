@@ -7,7 +7,12 @@ from pymongo.errors import OperationFailure
 from Python.Classes import RegistroDiario, Relatorio, SessaoEstudo, Tarefa
 from Python.ciclo_dia import ErroCicloDia, ciclo_aberto, listar_registros
 from Python.migrar_vinculos_dia import ErroMigracaoVinculo, migrar
-from Python.persistencia_dia import ErroPersistenciaDia, montar_retrato, persistir_dia
+from Python.persistencia_dia import (
+    ErroPersistenciaDia,
+    montar_retrato,
+    persistir_dia,
+    selecionar_ciclo,
+)
 from Python.serializacao_yaml import ler_yaml, salvar_yaml
 from Python.cli import main
 from unittest.mock import patch
@@ -53,6 +58,7 @@ class PersistenciaDiaTestCase(unittest.TestCase):
         colecao.create_index.assert_called_once_with("data",unique=True)
         args=colecao.replace_one.call_args; self.assertEqual(args.args[0],{"data":"2026-09-15"}); self.assertTrue(args.kwargs["upsert"])
         cliente.close.assert_called_once()
+        self.salvar_relatorio()
         colecao.create_index.side_effect=OperationFailure("mongodb://usuario:senha@host")
         cliente.reset_mock()
         with self.assertRaises(ErroPersistenciaDia) as erro: persistir_dia(self.raiz,self.data,fabrica=MagicMock(return_value=cliente))
@@ -115,13 +121,10 @@ class PersistenciaDiaTestCase(unittest.TestCase):
         self.assertEqual(len(registros), 1)
         self.assertIsInstance(registros[0][1], RegistroDiario)
 
-    def test_persistir_dia_com_relatorio_generico_mantem_arquivos_locais(self):
+    def test_persistir_dia_com_relatorio_generico_remove_selecao(self):
         self.salvar_relatorio()
         caminho_generico = self.raiz / "Relatórios" / "RG-2026-09-15-planejamento.yaml"
         salvar_yaml(Relatorio(data=self.data, nome="Planejamento", notas="Notas do planejamento"), caminho_generico)
-
-        conteudo_diario = self.rel.read_bytes()
-        conteudo_generico = caminho_generico.read_bytes()
 
         cliente = MagicMock()
         colecao = cliente.__getitem__.return_value.__getitem__.return_value
@@ -137,8 +140,151 @@ class PersistenciaDiaTestCase(unittest.TestCase):
         self.assertEqual(rel_doc["notas"], "Notas do planejamento")
         self.assertEqual(rel_doc["data"], "2026-09-15")
 
-        # Arquivos locais inalterados
-        self.assertEqual(self.rel.read_bytes(), conteudo_diario)
-        self.assertEqual(caminho_generico.read_bytes(), conteudo_generico)
+        self.assertFalse(self.rel.exists())
+        self.assertFalse(caminho_generico.exists())
+        self.assertTrue((self.raiz / "Relatórios").is_dir())
+
+    def test_selecao_reune_documento_e_somente_caminhos_da_data(self):
+        self.salvar_relatorio()
+        outra_data = self.raiz / "Relatórios" / "RG-2026-09-14-outro.yaml"
+        salvar_yaml(Relatorio(data=date(2026, 9, 14), nome="Outro"), outra_data)
+        concluida = self.raiz / "Tarefas" / "Concluidas" / "concluida.yaml"
+        tarefa = Tarefa(
+            dia=self.data,
+            inicio=datetime(2026, 9, 15, 10, tzinfo=FUSO),
+            fim=datetime(2026, 9, 15, 11, tzinfo=FUSO),
+        )
+        tarefa.duracao = "01:00:00"
+        salvar_yaml(tarefa, concluida)
+        ativa = self.raiz / "Tarefas" / "Tarefa em andamento" / "ativa.yaml"
+        salvar_yaml(Tarefa(dia=self.data), ativa)
+        pausa = self.raiz / "Tarefas" / "Pausas" / "pausa.yaml"
+        pausa.parent.mkdir(parents=True, exist_ok=True)
+        pausa.write_text("transitória", encoding="utf-8")
+
+        selecao = selecionar_ciclo(self.raiz, self.data)
+
+        self.assertEqual(selecao.documento["data"], "2026-09-15")
+        self.assertEqual(set(selecao.caminhos), {self.rel.resolve(), concluida.resolve()})
+        self.assertNotIn(outra_data.resolve(), selecao.caminhos)
+        self.assertNotIn(ativa.resolve(), selecao.caminhos)
+        self.assertNotIn(pausa.resolve(), selecao.caminhos)
+
+    def test_sucesso_preserva_arquivos_fora_da_selecao_e_diretorios(self):
+        self.salvar_relatorio()
+        outro = self.raiz / "Relatórios" / "RG-2026-09-14-outro.yaml"
+        salvar_yaml(Relatorio(data=date(2026, 9, 14), nome="Outro"), outro)
+        ativa = self.raiz / "Tarefas" / "Tarefa em andamento" / "ativa.yaml"
+        salvar_yaml(Tarefa(dia=self.data), ativa)
+
+        persistir_dia(self.raiz, self.data, fabrica=MagicMock(return_value=MagicMock()))
+
+        self.assertFalse(self.rel.exists())
+        self.assertTrue(outro.exists())
+        self.assertTrue(ativa.exists())
+        self.assertTrue((self.raiz / "Relatórios").is_dir())
+        self.assertTrue((self.raiz / "Tarefas" / "Tarefa em andamento").is_dir())
+
+    def test_falha_remota_preserva_bytes_e_nao_cria_manifesto(self):
+        self.salvar_relatorio()
+        original = self.rel.read_bytes()
+        cliente = MagicMock()
+        colecao = cliente.__getitem__.return_value.__getitem__.return_value
+        colecao.replace_one.side_effect = OperationFailure("falha")
+
+        with self.assertRaisesRegex(ErroPersistenciaDia, "MongoDB"):
+            persistir_dia(self.raiz, self.data, fabrica=MagicMock(return_value=cliente))
+
+        self.assertEqual(self.rel.read_bytes(), original)
+        self.assertFalse((self.raiz / ".diario" / "limpezas-pendentes" / "2026-09-15.json").exists())
+
+    def test_falha_parcial_de_limpeza_e_retomada_nao_acessa_mongodb(self):
+        self.salvar_relatorio()
+        caminho_generico = self.raiz / "Relatórios" / "RG-2026-09-15-plano.yaml"
+        salvar_yaml(Relatorio(data=self.data, nome="Plano"), caminho_generico)
+        cliente = MagicMock()
+        unlink_real = Path.unlink
+        falhou = False
+
+        def unlink_controlado(caminho, *args, **kwargs):
+            nonlocal falhou
+            if Path(caminho) == caminho_generico and not falhou:
+                falhou = True
+                raise PermissionError("ocupado")
+            return unlink_real(caminho, *args, **kwargs)
+
+        with patch.object(Path, "unlink", autospec=True, side_effect=unlink_controlado):
+            with self.assertRaisesRegex(ErroPersistenciaDia, "falha ao limpar"):
+                persistir_dia(
+                    self.raiz, self.data, fabrica=MagicMock(return_value=cliente)
+                )
+
+        manifesto = self.raiz / ".diario" / "limpezas-pendentes" / "2026-09-15.json"
+        self.assertTrue(manifesto.exists())
+        self.assertFalse(self.rel.exists())
+        self.assertTrue(caminho_generico.exists())
+        replace_one = cliente.__getitem__.return_value.__getitem__.return_value.replace_one
+        replace_one.assert_called_once()
+
+        fabrica = MagicMock()
+        self.assertEqual(persistir_dia(self.raiz, self.data, fabrica=fabrica), self.data)
+        fabrica.assert_not_called()
+        self.assertFalse(caminho_generico.exists())
+        self.assertFalse(manifesto.exists())
+
+    def test_manifesto_inseguro_e_rejeitado_sem_acesso_remoto(self):
+        manifesto = self.raiz / ".diario" / "limpezas-pendentes" / "2026-09-15.json"
+        manifesto.parent.mkdir(parents=True)
+        for caminho in (
+            "../fora.yaml",
+            "C:/fora.yaml",
+            "Tarefas/Tarefa em andamento/ativa.yaml",
+        ):
+            with self.subTest(caminho=caminho):
+                manifesto.write_text(
+                    '{"versao": 1, "data": "2026-09-15", '
+                    f'"caminhos": [{caminho!r}]}}\n'.replace("'", '"'),
+                    encoding="utf-8",
+                )
+                fabrica = MagicMock()
+                with self.assertRaisesRegex(
+                    ErroPersistenciaDia, "inseguro|fora dos diretórios"
+                ):
+                    persistir_dia(self.raiz, self.data, fabrica=fabrica)
+                fabrica.assert_not_called()
+
+    def test_arquivo_criado_depois_da_selecao_nao_e_removido(self):
+        self.salvar_relatorio()
+        posterior = self.raiz / "Relatórios" / "RG-2026-09-15-posterior.yaml"
+        cliente = MagicMock()
+        colecao = cliente.__getitem__.return_value.__getitem__.return_value
+
+        def criar_depois_da_selecao(*args, **kwargs):
+            salvar_yaml(Relatorio(data=self.data, nome="Posterior"), posterior)
+
+        colecao.replace_one.side_effect = criar_depois_da_selecao
+        persistir_dia(self.raiz, self.data, fabrica=MagicMock(return_value=cliente))
+
+        self.assertFalse(self.rel.exists())
+        self.assertTrue(posterior.exists())
+
+    def test_falha_ao_gravar_manifesto_preserva_selecao_apos_upsert(self):
+        self.salvar_relatorio()
+        original = self.rel.read_bytes()
+        cliente = MagicMock()
+
+        with patch(
+            "Python.persistencia_dia.os.replace", side_effect=OSError("sem espaço")
+        ):
+            with self.assertRaisesRegex(ErroPersistenciaDia, "registrar a limpeza"):
+                persistir_dia(
+                    self.raiz, self.data, fabrica=MagicMock(return_value=cliente)
+                )
+
+        cliente.__getitem__.return_value.__getitem__.return_value.replace_one.assert_called_once()
+        self.assertEqual(self.rel.read_bytes(), original)
+        self.assertFalse(
+            (self.raiz / ".diario" / "limpezas-pendentes" / "2026-09-15.json").exists()
+        )
 
 if __name__=="__main__": unittest.main()

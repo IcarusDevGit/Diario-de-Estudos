@@ -87,20 +87,61 @@ Documentos
 -Relatório geral do dia inteiro
 -Relatório de trabalho
 -Relatório de performance
--------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------
 
-Se inicia um dia:
-Um Relatório é gerado a partir de um modelo, contendo todos os dados relacionais a serem preenchidos durante o dia
-Colunas novas podem ser adicionadas a qualquer momento, de forma modular
+* Rotina
+acordo
+como
+exercício
+estudo/programação
+banho
+estudo/programação
+almoço
+trabalho
+lazer
+dormir
 
-Cada Tarefa será um objeto novo. Assim que o objeto é criado será registrado o horário de início e um cronômetro, que pode ser pausado a qualquer momento.
+* Importantes
+Sono
+Exercício
+Estudo
+Programação
+Trabalho
 
-Todos os Objetos serão tarefas. Apenas alguns, como sessão de estudo, terão classe própria. Outras tarefas como almoço, banho e outros serão tarefas genéricas com um campo de descrição para especificar o que é cada tarefa.
+* Arquivo final
+Relatório diário com todos os dados relacionais e subtítulos contendo relatórios e tarefas
 
-Objetos (Podem variar na quantidade por dia)
-Tarefa (classe mãe)
-Sessão de estudo
-Sessão de exercício físico
+* Dados Relacionais
+data
+notas
+dormi_dia_anterior
+acordei
+levantei_da_cama
+cafe_da_manha
+remedio
+almoco
+folga
+concentracao
+exercicio_fisico
+ativacao_mental
+procrastinacao
+compulsao_alimentar
+estresse
+qualidade_do_sono
+alcool
+sexo_e_masturbacao
+motivacao
+fui_dormir
+Campos calculados
+    Quantidade de Sessões de estudo, Sessões de programação e Sessões de exercício físico
+    Quantidade de etapas em sessões de programação e quantidade de assuntos em sessões de estudo
+    Tempo total de estudo, programação e exercício físico
+    Tempo total de pausa
+    Tempo médio entre sessões
 
-Relatórios (Apenas um por dia)
-Relatório diário (Todos os dados relacionais)
+* Relatórios (subtítulos)
+Sono
+Alimentação
+Trabalho
+Lazer
+    

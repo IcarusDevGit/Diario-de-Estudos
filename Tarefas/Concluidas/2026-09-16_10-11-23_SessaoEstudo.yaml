@@ -1,0 +1,12 @@
+classe: SessaoEstudo
+dia: '2026-09-16'
+inicio: '2026-09-16T10:11:23.142675-03:00'
+fim: '2026-09-16T10:45:39.268430-03:00'
+pausas: []
+duracao: 00:34:16
+nome: sessao-1
+notas: 'Arquivos deletados após a persistência no MongoDB, Brainstorm do esquema do registro diário'
+concentracao: 3.5
+motivacao: 3.5
+procrastinacao: 3
+ativacao_mental: 3.5

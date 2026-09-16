@@ -1,7 +1,7 @@
 classe: RegistroDiario
 data: '2026-09-16'
 nome: null
-notas: null
+notas: 'Procrastinei antes da primeira sessao de exercicio pré-estudo com youtube e xadrez'
 dormi_dia_anterior: '22:53'
 acordei: '07:00'
 levantei_da_cama: '07:45'
@@ -10,7 +10,7 @@ remedio: '08:10'
 almoco: null
 folga: false
 concentracao: null
-exercicio_fisico: null
+exercicio_fisico: 4.5
 ativacao_mental: null
 procrastinacao: null
 compulsao_alimentar: null
